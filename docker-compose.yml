@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  # ========== Spring Boot 后端 ==========
+  backend:
+    build:
+      context: ./smart-medical-server
+      dockerfile: Dockerfile
+    container_name: med-backend
+    restart: always
+    environment:
+      # 数据库配置（通过容器名访问，使用内部端口 3306）
+      SPRING_DATASOURCE_URL: jdbc:mysql://music_mysql:3306/med_platform?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      # Redis 配置（通过容器名访问）
+      SPRING_DATA_REDIS_HOST: music_redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: root
+    ports:
+      - "8080:8080"
+    networks:
+      - music-platform_default
+
+  # ========== Vue 前端 ==========
+  frontend:
+    build:
+      context: ./med-platform
+      dockerfile: Dockerfile
+    container_name: med-frontend
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    networks:
+      - music-platform_default
+
+# ========== 使用已存在的外部网络 ==========
+networks:
+  music-platform_default:
+    external: true

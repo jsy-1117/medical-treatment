@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.medical.smart_medical_server.mapper.AppointmentMapper">
+
+    <select id="selectAppointmentPage" resultType="com.medical.smart_medical_server.VO.AppointmentVO">
+        SELECT
+        a.id,
+        a.patient_id,
+        p.name AS patient_name,
+        a.doctor_id,
+        d.name AS doctor_name,
+        a.schedule_id,
+        s.work_date,
+        s.shift_type,
+        a.status,
+        a.create_time
+        FROM appointment a
+        LEFT JOIN patient p ON a.patient_id = p.id
+        LEFT JOIN doctor d ON a.doctor_id = d.id
+        LEFT JOIN doctor_schedule s ON a.schedule_id = s.id
+        <where>
+            <if test="query.patientId != null">
+                AND a.patient_id = #{query.patientId}
+            </if>
+            <if test="query.doctorId != null">
+                AND a.doctor_id = #{query.doctorId}
+            </if>
+            <if test="query.status != null">
+                AND a.status = #{query.status}
+            </if>
+            <if test="query.startDate != null">
+                AND DATE(a.create_time) &gt;= #{query.startDate}
+            </if>
+            <if test="query.endDate != null">
+                AND DATE(a.create_time) &lt;= #{query.endDate}
+            </if>
+        </where>
+        ORDER BY a.create_time DESC
+    </select>
+
+</mapper>
