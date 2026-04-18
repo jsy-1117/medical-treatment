@@ -1,6 +1,7 @@
 package com.medical.smart_medical_server.exception;
 
 import com.medical.smart_medical_server.common.Result;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -15,6 +16,7 @@ import java.util.Map;
  * 全局异常处理器
  */
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     /**
@@ -50,7 +52,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RuntimeException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public Result<?> handleRuntimeException(RuntimeException e) {
-        e.printStackTrace();
+        log.error("Unhandled runtime exception", e);
         return Result.error("系统异常：" + e.getMessage());
     }
 
@@ -60,7 +62,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public Result<?> handleException(Exception e) {
-        e.printStackTrace();
+        log.error("Unhandled exception", e);
         return Result.error("服务器异常，请稍后重试");
     }
 }
