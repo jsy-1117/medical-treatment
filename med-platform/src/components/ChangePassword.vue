@@ -1,6 +1,6 @@
 <template>
-    <el-dialog v-model="visible" title="修改密码" width="400px" @close="handleClose">
-        <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
+    <el-dialog v-model="visible" title="修改密码" width="420px" @close="handleClose" align-center>
+        <el-form ref="formRef" :model="form" :rules="rules" label-width="80px" class="password-form">
             <el-form-item label="旧密码" prop="oldPassword">
                 <el-input v-model="form.oldPassword" type="password" placeholder="请输入旧密码" show-password />
             </el-form-item>
@@ -42,7 +42,6 @@ const form = reactive({
     confirmPassword: ''
 });
 
-// 自定义验证规则：确认密码
 const validateConfirmPassword = (_rule: any, value: string, callback: any) => {
     if (value !== form.newPassword) {
         callback(new Error('两次输入的密码不一致'));
@@ -75,7 +74,6 @@ watch(visible, (val) => {
 
 const handleClose = () => {
     visible.value = false;
-    // 重置表单
     form.oldPassword = '';
     form.newPassword = '';
     form.confirmPassword = '';
@@ -104,3 +102,11 @@ const handleSubmit = async () => {
     });
 };
 </script>
+
+<style scoped lang="scss">
+.password-form {
+    :deep(.el-form-item__label) {
+        color: #64748b;
+    }
+}
+</style>
