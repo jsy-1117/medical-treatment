@@ -84,7 +84,7 @@
                                         effect="light"
                                         type="success"
                                     >
-                                        {{ doc.name }} · {{ doc.remainingQuota }}
+                                        {{ doc.doctorName }} · {{ doc.remainingQuota }}
                                     </el-tag>
                                     <span v-if="group.availableDoctors.length > 3" class="more-tip">+{{ group.availableDoctors.length - 3 }} 更多</span>
                                 </div>
@@ -261,7 +261,7 @@ interface ScheduleGroup {
 
 const router = useRouter();
 
-const allScheduleData = ref<DoctorScheduleVO[]>([]);
+const scheduleData = ref<DoctorScheduleVO[]>([]);
 const loading = ref(false);
 const total = ref(0);
 
@@ -305,24 +305,10 @@ const filteredDoctorList = computed(() => {
     return doctorList.value.filter(d => d.deptId === queryForm.deptId);
 });
 
-const sortedScheduleData = computed(() => {
-    return [...allScheduleData.value].sort((a, b) => {
-        const dateCompare = a.workDate.localeCompare(b.workDate);
-        if (dateCompare !== 0) return dateCompare;
-        return a.shiftType - b.shiftType || a.doctorName.localeCompare(b.doctorName);
-    });
-});
-
-const pagedScheduleData = computed(() => {
-    const start = (queryForm.pageNum - 1) * queryForm.pageSize;
-    const end = start + queryForm.pageSize;
-    return sortedScheduleData.value.slice(start, end);
-});
-
 const groupedScheduleList = computed<ScheduleGroup[]>(() => {
     const groups = new Map<string, DoctorScheduleVO[]>();
 
-    pagedScheduleData.value.forEach((schedule) => {
+    scheduleData.value.forEach((schedule) => {
         const list = groups.get(schedule.workDate) || [];
         list.push(schedule);
         groups.set(schedule.workDate, list);
@@ -339,8 +325,6 @@ const groupedScheduleList = computed<ScheduleGroup[]>(() => {
         };
     });
 });
-
-const scheduleRequestPageSize = 10000;
 
 const getQuotaColor = (num: number) => {
     if (num === 0) return 'text-danger';
@@ -394,24 +378,33 @@ const fetchData = async () => {
     try {
         const res = await scheduleApi.getList({
             ...queryForm,
-            pageNum: 1,
-            pageSize: scheduleRequestPageSize
+            pageNum: queryForm.pageNum,
+            pageSize: queryForm.pageSize,
+            sortField: 'workDate,shiftType',
+            sortDirection: 'asc,asc'
         });
         if (res.code === 200) {
-            allScheduleData.value = res.data.records.map(schedule => {
-                const doctor = doctorList.value.find(d => d.id === schedule.doctorId);
-                const dept = departmentList.value.find(d => d.id === schedule.deptId);
-
-                return {
-                    ...schedule,
-                    doctorName: doctor?.name || `医生${schedule.doctorId}`,
-                    deptName: dept?.deptName || `科室${schedule.deptId}`
-                };
-            });
+            scheduleData.value = res.data.records
+                .map(schedule => {
+                    const doctor = doctorList.value.find(d => d.id === schedule.doctorId);
+                    const dept = departmentList.value.find(d => d.id === schedule.deptId);
+                    return {
+                        ...schedule,
+                        doctorName: doctor?.name || `医生${schedule.doctorId}`,
+                        deptName: dept?.deptName || `科室${schedule.deptId}`
+                    };
+                })
+                .sort((a, b) => {
+                    const dateCompare = a.workDate.localeCompare(b.workDate);
+                    if (dateCompare !== 0) return dateCompare;
+                    const shiftCompare = a.shiftType - b.shiftType;
+                    if (shiftCompare !== 0) return shiftCompare;
+                    return (a.doctorName || '').localeCompare(b.doctorName || '');
+                });
             total.value = res.data.total;
 
-            const maxPage = Math.max(1, Math.ceil(res.data.total / queryForm.pageSize));
-            if (queryForm.pageNum > maxPage) {
+            const maxPage = Math.max(1, Math.ceil(res.data.total / (queryForm.pageSize || 10)));
+            if ((queryForm.pageNum || 1) > maxPage) {
                 queryForm.pageNum = maxPage;
             }
         }

@@ -126,6 +126,12 @@
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+
         <!-- 在 </dependencies> 之前添加以下依赖 -->
 
         <!-- ========== Google Generative AI (Gemini) ========== -->
