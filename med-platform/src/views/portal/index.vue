@@ -104,7 +104,7 @@
                 </div>
 
                 <el-row :gutter="20">
-                    <el-col :xs="12" :sm="12" :md="6" v-for="dept in departmentList" :key="dept.id" class="mb-4">
+                    <el-col :xs="12" :sm="12" :md="6" v-for="dept in departmentList" :key="dept.id" class="mb-4 dept-col">
                         <div class="dept-card" @click="goToDeptDoctors(dept.id)">
                             <div class="card-top">
                                 <div class="card-icon-wrapper">
@@ -473,7 +473,12 @@ onMounted(() => {
     margin-bottom: 20px;
 }
 
+.dept-col {
+    display: flex;
+}
+
 .dept-card {
+    flex: 1;
     min-height: 160px;
     border-radius: 20px;
     background: rgba(255, 255, 255, 0.96);
