@@ -6,7 +6,10 @@
                     <el-icon :size="24" class="brand-icon">
                         <Tickets />
                     </el-icon>
-                    <h1>我的挂号 <span class="subtitle">My Appointments</span></h1>
+                    <div>
+                        <h1>我的挂号</h1>
+                        <p>My Appointments</p>
+                    </div>
                 </div>
                 <el-button type="primary" plain round icon="HomeFilled" @click="$router.push('/')">
                     返回首页
@@ -18,28 +21,29 @@
             <el-card class="table-card" shadow="never">
                 <template #header>
                     <div class="card-header">
-                        <span class="title">
-                            <el-icon>
-                                <List />
-                            </el-icon> 挂号记录列表
-                        </span>
+                        <div class="header-copy">
+                            <span class="title"><el-icon><List /></el-icon> 挂号记录</span>
+                            <span class="sub-title">统一查看就诊状态、时间和操作</span>
+                        </div>
                         <el-button type="primary" link icon="Refresh" :loading="loading" @click="fetchData">
                             刷新列表
                         </el-button>
                     </div>
                 </template>
 
-                <el-table :data="appointmentList" v-loading="loading" style="width: 100%"
-                    :header-cell-style="{ background: '#f8fafc', color: '#64748b' }">
+                <el-table
+                    :data="appointmentList"
+                    v-loading="loading"
+                    style="width: 100%"
+                    :header-cell-style="{ background: '#f8fafc', color: '#64748b' }"
+                >
                     <el-table-column label="医生信息" min-width="180">
                         <template #default="{ row }">
                             <div class="doctor-info">
                                 <el-avatar :size="44" icon="UserFilled" class="avatar" />
                                 <div class="info-text">
                                     <div class="name">{{ row.doctorName }}</div>
-                                    <div class="dept">
-                                        <el-tag size="small" type="info" effect="plain">{{ row.deptName }}</el-tag>
-                                    </div>
+                                    <el-tag size="small" type="info" effect="plain">{{ row.deptName }}</el-tag>
                                 </div>
                             </div>
                         </template>
@@ -48,15 +52,10 @@
                     <el-table-column label="就诊时间" width="200">
                         <template #default="{ row }">
                             <div class="time-info">
-                                <div class="date"><el-icon>
-                                        <Calendar />
-                                    </el-icon> {{ row.workDate }}</div>
-                                <div class="shift">
-                                    <el-tag size="small" :type="row.shiftType === 1 ? 'warning' : 'info'"
-                                        effect="light">
-                                        {{ row.shiftType === 1 ? '上午 (08:00-12:00)' : '下午 (14:00-18:00)' }}
-                                    </el-tag>
-                                </div>
+                                <div class="date"><el-icon><Calendar /></el-icon> {{ row.workDate }}</div>
+                                <el-tag size="small" :type="row.shiftType === 1 ? 'warning' : 'info'" effect="light">
+                                    {{ row.shiftType === 1 ? '上午 (08:00-12:00)' : '下午 (14:00-18:00)' }}
+                                </el-tag>
                             </div>
                         </template>
                     </el-table-column>
@@ -64,15 +63,9 @@
                     <el-table-column label="当前状态" width="120">
                         <template #default="{ row }">
                             <el-tag :type="getStatusType(row.status)" effect="light" round class="status-tag">
-                                <el-icon v-if="row.status === 1">
-                                    <CircleCheckFilled />
-                                </el-icon>
-                                <el-icon v-else-if="row.status === 2">
-                                    <CircleCloseFilled />
-                                </el-icon>
-                                <el-icon v-else>
-                                    <Clock />
-                                </el-icon>
+                                <el-icon v-if="row.status === 1"><CircleCheckFilled /></el-icon>
+                                <el-icon v-else-if="row.status === 2"><CircleCloseFilled /></el-icon>
+                                <el-icon v-else><Clock /></el-icon>
                                 {{ getStatusText(row.status) }}
                             </el-tag>
                         </template>
@@ -86,8 +79,7 @@
 
                     <el-table-column label="操作" width="120" fixed="right" align="right">
                         <template #default="{ row }">
-                            <el-button v-if="row.status === 0" type="danger" plain size="small" round icon="Close"
-                                @click="handleCancel(row)">
+                            <el-button v-if="row.status === 0" type="danger" plain size="small" round icon="Close" @click="handleCancel(row)">
                                 取消挂号
                             </el-button>
                             <span v-else class="text-placeholder">-</span>
@@ -111,7 +103,6 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { usePatientStore } from '@/stores/patient';
 import { appointmentApi } from '@/api/appointment';
 import type { AppointmentVO } from '@/types/appointment';
-// 引入图标
 import {
     Tickets, HomeFilled, List, Refresh, UserFilled,
     Calendar, CircleCheckFilled, CircleCloseFilled, Clock, Close
@@ -123,9 +114,9 @@ const loading = ref(false);
 
 const getStatusType = (status: number) => {
     switch (status) {
-        case 0: return 'primary'; // 待就诊用蓝色，表示进行中
-        case 1: return 'success'; // 完成用绿色
-        case 2: return 'info';    // 取消用灰色，降低视觉干扰
+        case 0: return 'primary';
+        case 1: return 'success';
+        case 2: return 'info';
         default: return 'info';
     }
 };
@@ -143,7 +134,6 @@ const fetchData = async () => {
     if (!patientStore.patientInfo?.id) return;
     loading.value = true;
     try {
-        // 这里假设 API 支持分页，传入较大的 pageSize 以获取全部记录，或者你需要实现分页组件
         const res = await appointmentApi.getPatientAppointments(patientStore.patientInfo.id, 1, 100);
         if (res.code === 200) {
             appointmentList.value = res.data.records;
@@ -157,7 +147,7 @@ const fetchData = async () => {
 
 const handleCancel = (row: AppointmentVO) => {
     ElMessageBox.confirm(
-        '确定要取消该次预约吗？取消后不可恢复，需重新挂号。',
+        '确定要取消该次预约吗？取消后不可恢复。',
         '取消提示',
         {
             type: 'warning',
@@ -187,24 +177,31 @@ onMounted(() => {
 
 .appointments-container {
     min-height: 100vh;
-    background-color: #f8fafc;
+    background:
+        radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 26%),
+        #f8fafc;
     font-family: 'Inter', sans-serif;
 }
 
-/* 顶部导航 */
 .app-header {
-    background: #ffffff;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    height: auto;
+    padding: 0;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(14px);
     border-bottom: 1px solid #e2e8f0;
-    height: 64px;
-    padding: 0 40px;
 
     .header-inner {
         max-width: 1200px;
         margin: 0 auto;
-        height: 100%;
+        min-height: 70px;
+        padding: 0 24px;
         display: flex;
         align-items: center;
         justify-content: space-between;
+        gap: 16px;
     }
 
     .brand {
@@ -216,92 +213,102 @@ onMounted(() => {
             color: #3b82f6;
             background: #eff6ff;
             padding: 6px;
-            border-radius: 6px;
+            border-radius: 8px;
+            box-sizing: content-box;
         }
 
         h1 {
-            font-size: 20px;
-            color: #1e293b;
             margin: 0;
-            display: flex;
-            align-items: baseline;
-            gap: 8px;
+            font-size: 18px;
+            color: #0f172a;
+        }
 
-            .subtitle {
-                font-size: 13px;
-                color: #94a3b8;
-                font-weight: 400;
-            }
+        p {
+            margin: 2px 0 0;
+            color: #94a3b8;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
         }
     }
 }
 
 .main-content {
     max-width: 1200px;
-    margin: 30px auto;
-    padding: 0 20px;
+    margin: 24px auto 0;
+    padding: 0 20px 56px;
 }
 
-/* 卡片与表格样式 */
 .table-card {
-    border-radius: 12px;
+    border-radius: 24px;
     border: 1px solid #e2e8f0;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.04);
+    overflow: hidden;
 
     .card-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
+        gap: 16px;
+
+        .header-copy {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
 
         .title {
             font-size: 16px;
             font-weight: 600;
-            color: #334155;
-            display: flex;
+            color: #0f172a;
+            display: inline-flex;
             align-items: center;
             gap: 8px;
+        }
+
+        .sub-title {
+            color: #64748b;
+            font-size: 13px;
         }
     }
 }
 
-/* 表格内部样式 */
 .doctor-info {
     display: flex;
     align-items: center;
     gap: 12px;
 
     .avatar {
-        background: #f1f5f9;
-        color: #94a3b8;
-        border: 1px solid #e2e8f0;
+        background: #f8fafc;
+        color: #cbd5e1;
+        border: 2px solid #fff;
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
     }
 
     .info-text {
         .name {
             font-weight: 600;
-            color: #1e293b;
-            font-size: 14px;
-            margin-bottom: 2px;
+            color: #0f172a;
+            margin-bottom: 4px;
         }
     }
 }
 
 .time-info {
     .date {
-        color: #334155;
-        font-weight: 500;
-        margin-bottom: 4px;
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 8px;
+        color: #334155;
+        font-weight: 500;
+        margin-bottom: 6px;
     }
 }
 
 .status-tag {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 4px;
-    width: fit-content;
 }
 
 .meta-text {
@@ -311,5 +318,22 @@ onMounted(() => {
 
 .text-placeholder {
     color: #cbd5e1;
+}
+
+@media (max-width: 768px) {
+    .app-header .header-inner {
+        padding: 14px 16px;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .main-content {
+        padding: 0 16px 40px;
+    }
+
+    .table-card .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 }
 </style>
