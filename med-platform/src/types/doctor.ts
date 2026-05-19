@@ -79,4 +79,6 @@ export interface ScheduleQueryDTO {
     endDate?: string;
     pageNum?: number;
     pageSize?: number;
+    sortField?: string;
+    sortDirection?: string;
 }

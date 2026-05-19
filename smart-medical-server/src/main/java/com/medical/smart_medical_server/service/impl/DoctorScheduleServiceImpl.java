@@ -2,6 +2,7 @@ package com.medical.smart_medical_server.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.medical.smart_medical_server.DTO.ScheduleCreateDTO;
@@ -41,8 +42,65 @@ public class DoctorScheduleServiceImpl extends ServiceImpl<DoctorScheduleMapper,
     @Autowired
     private DepartmentMapper departmentMapper;
 
+    /**
+     * 排班查询允许的排序字段白名单。key = 前端传入的字段名，value = 对应的 Lambda 列引用。
+     * 不在白名单内的字段名会被静默忽略，防止 SQL 注入。
+     */
+    private static final Map<String, SFunction<DoctorSchedule, ?>> ALLOWED_SORT_COLUMNS;
+
+    static {
+        Map<String, SFunction<DoctorSchedule, ?>> map = new LinkedHashMap<>();
+        map.put("workDate",       DoctorSchedule::getWorkDate);
+        map.put("shiftType",      DoctorSchedule::getShiftType);
+        map.put("quota",          DoctorSchedule::getQuota);
+        map.put("remainingQuota", DoctorSchedule::getRemainingQuota);
+        map.put("createTime",     DoctorSchedule::getCreateTime);
+        map.put("status",         DoctorSchedule::getStatus);
+        ALLOWED_SORT_COLUMNS = Collections.unmodifiableMap(map);
+    }
+
+    /**
+     * 根据 DTO 中的 sortField/sortDirection 动态构建排序条件。
+     * 使用白名单防止 SQL 注入。未指定排序字段时默认按 workDate ASC, shiftType ASC 排序。
+     */
+    void applyDynamicSort(LambdaQueryWrapper<DoctorSchedule> wrapper, ScheduleQueryDTO dto) {
+        if (dto.getSortField() == null || dto.getSortField().isBlank()) {
+            wrapper.orderByAsc(DoctorSchedule::getWorkDate);
+            wrapper.orderByAsc(DoctorSchedule::getShiftType);
+            return;
+        }
+
+        String[] fields = dto.getSortField().split(",");
+        String[] directions = (dto.getSortDirection() != null && !dto.getSortDirection().isBlank())
+                ? dto.getSortDirection().split(",")
+                : new String[0];
+
+        boolean anyApplied = false;
+        for (int i = 0; i < fields.length; i++) {
+            String fieldName = fields[i].trim();
+            SFunction<DoctorSchedule, ?> column = ALLOWED_SORT_COLUMNS.get(fieldName);
+            if (column == null) {
+                continue;
+            }
+
+            String dir = (i < directions.length ? directions[i].trim() : "asc").toLowerCase();
+            if ("desc".equals(dir)) {
+                wrapper.orderByDesc(column);
+            } else {
+                wrapper.orderByAsc(column);
+            }
+            anyApplied = true;
+        }
+
+        // 所有字段都不在白名单内时，回退到默认排序
+        if (!anyApplied) {
+            wrapper.orderByAsc(DoctorSchedule::getWorkDate);
+            wrapper.orderByAsc(DoctorSchedule::getShiftType);
+        }
+    }
+
     @Override
-    @Cacheable(key = "'page:' + #queryDTO.pageNum + ':' + #queryDTO.pageSize + ':' + #queryDTO.doctorId + ':' + #queryDTO.deptId", unless = "#result == null")
+    @Cacheable(key = "'page:' + #queryDTO.pageNum + ':' + #queryDTO.pageSize + ':' + #queryDTO.doctorId + ':' + #queryDTO.deptId + ':' + #queryDTO.startDate + ':' + #queryDTO.endDate + ':' + #queryDTO.sortField + ':' + #queryDTO.sortDirection", unless = "#result == null")
     public IPage<DoctorScheduleVO> querySchedulePage(ScheduleQueryDTO queryDTO) {
         LambdaQueryWrapper<DoctorSchedule> wrapper = new LambdaQueryWrapper<>();
 
@@ -59,7 +117,7 @@ public class DoctorScheduleServiceImpl extends ServiceImpl<DoctorScheduleMapper,
             wrapper.le(DoctorSchedule::getWorkDate, queryDTO.getEndDate());
         }
 
-        wrapper.orderByDesc(DoctorSchedule::getWorkDate);
+        applyDynamicSort(wrapper, queryDTO);
 
         Page<DoctorSchedule> page = new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize());
         IPage<DoctorSchedule> schedulePage = page(page, wrapper);
