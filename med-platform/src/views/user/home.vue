@@ -1,178 +1,109 @@
 <template>
-    <div class="user-home-container">
-        <el-header class="user-header">
-            <div class="header-inner">
-                <div class="brand">
-                    <el-icon :size="24" class="brand-icon">
-                        <FirstAidKit />
-                    </el-icon>
-                    <div>
-                        <h1>个人中心</h1>
-                        <p>Patient Portal</p>
-                    </div>
-                </div>
-                <el-button type="primary" plain round icon="HomeFilled" @click="$router.push('/')">
-                    返回首页
-                </el-button>
+    <PatientLayout>
+        <!-- 欢迎条 -->
+        <div class="welcome-card">
+            <div>
+                <h1>{{ patientStore.patientInfo?.name ? `${timePeriod}好，${patientStore.patientInfo.name}` : '欢迎回来' }}</h1>
+                <p v-if="stats.pending > 0">您有 {{ stats.pending }} 条待就诊的挂号记录，请按时前往科室就诊。</p>
+                <p v-else>管理您的个人资料与就诊记录。</p>
             </div>
-        </el-header>
-
-        <div class="main-content">
-            <el-row :gutter="20">
-                <el-col :xs="24" :md="8">
-                    <el-card class="profile-card" :body-style="{ padding: '0' }">
-                        <div class="profile-header-bg"></div>
-                        <div class="profile-content">
-                            <div class="avatar-wrapper">
-                                <el-avatar :size="84" class="user-avatar" icon="UserFilled" />
-                                <div class="edit-badge" @click="openEditDialog" title="编辑资料">
-                                    <el-icon><Edit /></el-icon>
-                                </div>
-                            </div>
-
-                            <h2 class="user-name">
-                                {{ patientStore.patientInfo?.name || '未设置昵称' }}
-                                <el-tag size="small" effect="plain" round v-if="patientStore.patientInfo?.age">
-                                    {{ patientStore.patientInfo?.age }}岁
-                                </el-tag>
-                            </h2>
-                            <p class="user-username">@{{ patientStore.patientInfo?.username }}</p>
-
-                            <el-alert v-if="!isProfileComplete" title="请完善信息以便挂号" type="warning" show-icon :closable="false" class="profile-alert" />
-
-                            <div class="info-list">
-                                <div class="info-item">
-                                    <span class="label"><el-icon><Iphone /></el-icon> 手机号</span>
-                                    <span class="value" :class="{ missing: !patientStore.patientInfo?.phone }">{{ patientStore.patientInfo?.phone || '未绑定' }}</span>
-                                </div>
-                                <div class="info-item">
-                                    <span class="label"><el-icon><Male /></el-icon> 性别</span>
-                                    <span class="value" :class="{ missing: !patientStore.patientInfo?.gender }">{{ genderText }}</span>
-                                </div>
-                                <div class="info-item">
-                                    <span class="label"><el-icon><Postcard /></el-icon> 身份证</span>
-                                    <span class="value id-card">{{ patientStore.patientInfo?.idCard || '未实名' }}</span>
-                                </div>
-                            </div>
-
-                            <div class="profile-actions">
-                                <el-button icon="Key" @click="showPasswordDialog = true" block plain>修改密码</el-button>
-                                <el-button icon="SwitchButton" type="danger" plain @click="handleLogout" block>退出登录</el-button>
-                            </div>
-                        </div>
-                    </el-card>
-                </el-col>
-
-                <el-col :xs="24" :md="16">
-                    <div class="section-title">我的诊疗概览</div>
-                    <el-row :gutter="16" class="mb-4">
-                        <el-col :xs="24" :sm="8">
-                            <div class="stat-card blue">
-                                <div class="stat-icon"><el-icon><Timer /></el-icon></div>
-                                <div class="stat-info">
-                                    <div class="stat-num">{{ stats.pending }}</div>
-                                    <div class="stat-label">待就诊</div>
-                                </div>
-                            </div>
-                        </el-col>
-                        <el-col :xs="24" :sm="8">
-                            <div class="stat-card green">
-                                <div class="stat-icon"><el-icon><CircleCheckFilled /></el-icon></div>
-                                <div class="stat-info">
-                                    <div class="stat-num">{{ stats.completed }}</div>
-                                    <div class="stat-label">已完成</div>
-                                </div>
-                            </div>
-                        </el-col>
-                        <el-col :xs="24" :sm="8">
-                            <div class="stat-card gray">
-                                <div class="stat-icon"><el-icon><CircleCloseFilled /></el-icon></div>
-                                <div class="stat-info">
-                                    <div class="stat-num">{{ stats.cancelled }}</div>
-                                    <div class="stat-label">已取消</div>
-                                </div>
-                            </div>
-                        </el-col>
-                    </el-row>
-
-                    <el-row :gutter="16" class="mb-4">
-                        <el-col :xs="24" :sm="12">
-                            <div class="quick-action-card primary" @click="$router.push('/book')">
-                                <div class="content">
-                                    <h3>预约挂号</h3>
-                                    <p>查找专家，在线预约</p>
-                                </div>
-                                <el-icon class="bg-icon"><Calendar /></el-icon>
-                                <div class="action-btn"><el-icon><Right /></el-icon></div>
-                            </div>
-                        </el-col>
-                        <el-col :xs="24" :sm="12">
-                            <div class="quick-action-card success" @click="$router.push('/user/appointments')">
-                                <div class="content">
-                                    <h3>我的挂号单</h3>
-                                    <p>查看记录，管理预约</p>
-                                </div>
-                                <el-icon class="bg-icon"><Tickets /></el-icon>
-                                <div class="action-btn"><el-icon><Right /></el-icon></div>
-                            </div>
-                        </el-col>
-                    </el-row>
-
-                    <el-card class="recent-card" shadow="never">
-                        <template #header>
-                            <div class="card-header">
-                                <span class="title-with-icon"><el-icon><Clock /></el-icon> 最近挂号记录</span>
-                                <el-button type="primary" link @click="$router.push('/user/appointments')">
-                                    查看全部 <el-icon class="el-icon--right"><ArrowRight /></el-icon>
-                                </el-button>
-                            </div>
-                        </template>
-
-                        <el-table :data="recentAppointments" v-loading="loading" style="width: 100%" :header-cell-style="{ background: '#f8fafc' }">
-                            <el-table-column label="医生信息" min-width="140">
-                                <template #default="{ row }">
-                                    <div class="doctor-cell">
-                                        <el-avatar :size="32" src="" icon="UserFilled" class="mr-2" />
-                                        <span class="doctor-name">{{ row.doctorName || `医生${row.doctorId}` }}</span>
-                                    </div>
-                                </template>
-                            </el-table-column>
-
-                            <el-table-column prop="workDate" label="就诊时间" width="140">
-                                <template #default="{ row }">
-                                    <div>{{ row.workDate }}</div>
-                                    <el-tag size="small" type="info" effect="plain">{{ row.shiftType === 1 ? '上午' : '下午' }}</el-tag>
-                                </template>
-                            </el-table-column>
-
-                            <el-table-column label="状态" width="100">
-                                <template #default="{ row }">
-                                    <el-tag :type="getStatusType(row.status)" effect="light" round>
-                                        {{ getStatusText(row.status) }}
-                                    </el-tag>
-                                </template>
-                            </el-table-column>
-
-                            <el-table-column label="操作" width="100" align="right">
-                                <template #default="{ row }">
-                                    <el-button v-if="row.status === 0" type="danger" plain size="small" round @click="handleCancel(row)">
-                                        取消
-                                    </el-button>
-                                    <span v-else class="text-gray">-</span>
-                                </template>
-                            </el-table-column>
-
-                            <template #empty>
-                                <el-empty description="暂无近期挂号记录" :image-size="80" />
-                            </template>
-                        </el-table>
-                    </el-card>
-                </el-col>
-            </el-row>
+            <div class="welcome-stats">
+                <div><span class="num">{{ stats.pending }}</span><span class="label">待就诊</span></div>
+                <div><span class="num">{{ stats.completed }}</span><span class="label">已完成</span></div>
+                <div><span class="num">{{ stats.cancelled }}</span><span class="label">已取消</span></div>
+            </div>
         </div>
 
+        <!-- 快速入口 -->
+        <div class="quick-grid">
+            <div class="quick-card" @click="$router.push('/book')">
+                <div class="quick-icon" style="background:#e6f4f1;color:#1a8a7a"><el-icon size="22"><Calendar /></el-icon></div>
+                <h4>预约挂号</h4>
+                <p>查找专家，在线预约</p>
+            </div>
+            <div class="quick-card" @click="$router.push('/user/appointments')">
+                <div class="quick-icon" style="background:#fef3c7;color:#b45309"><el-icon size="22"><Tickets /></el-icon></div>
+                <h4>我的挂号</h4>
+                <p>查看记录，管理预约</p>
+            </div>
+            <div class="quick-card" @click="openEditDialog">
+                <div class="quick-icon" style="background:#e0eefc;color:#1d6fc7"><el-icon size="22"><Edit /></el-icon></div>
+                <h4>编辑资料</h4>
+                <p>更新个人信息</p>
+            </div>
+            <div class="quick-card" @click="showPasswordDialog = true">
+                <div class="quick-icon" style="background:#f3e8ff;color:#7c3aed"><el-icon size="22"><Lock /></el-icon></div>
+                <h4>修改密码</h4>
+                <p>保障账号安全</p>
+            </div>
+        </div>
+
+        <!-- 内容区 -->
+        <div class="profile-grid">
+            <!-- 个人资料 -->
+            <div class="profile-card">
+                <h3 class="card-label">个人资料</h3>
+                <div class="profile-avatar-row">
+                    <el-avatar :size="64" class="profile-avatar" icon="UserFilled" />
+                    <div>
+                        <div class="profile-name">
+                            {{ patientStore.patientInfo?.name || '未设置昵称' }}
+                            <el-tag size="small" effect="plain" round v-if="patientStore.patientInfo?.age">{{ patientStore.patientInfo.age }}岁</el-tag>
+                        </div>
+                        <div class="profile-username">@{{ patientStore.patientInfo?.username }}</div>
+                    </div>
+                </div>
+
+                <el-alert v-if="!isProfileComplete" title="请完善信息以便挂号" type="warning" show-icon :closable="false" class="profile-alert" />
+
+                <div class="profile-info-list">
+                    <div class="info-row">
+                        <span class="info-label"><el-icon><Iphone /></el-icon> 手机号</span>
+                        <span class="info-value" :class="{ missing: !patientStore.patientInfo?.phone }">{{ patientStore.patientInfo?.phone || '未绑定' }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label"><el-icon><Male /></el-icon> 性别</span>
+                        <span class="info-value" :class="{ missing: !patientStore.patientInfo?.gender }">{{ genderText }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label"><el-icon><Postcard /></el-icon> 身份证</span>
+                        <span class="info-value">{{ patientStore.patientInfo?.idCard || '未实名' }}</span>
+                    </div>
+                </div>
+
+                <div class="profile-actions">
+                    <el-button size="small" plain @click="openEditDialog">编辑资料</el-button>
+                    <el-button size="small" plain type="danger" @click="handleLogout">退出登录</el-button>
+                </div>
+            </div>
+
+            <!-- 最近挂号记录 -->
+            <div class="profile-card">
+                <h3 class="card-label">最近挂号</h3>
+                <div class="tl-list" v-loading="loading">
+                    <div v-for="item in recentAppointments" :key="item.id" class="tl-item" :class="statusClass(item.status)">
+                        <div class="tl-dot"></div>
+                        <div class="tl-body">
+                            <div class="tl-date">{{ item.workDate }} {{ item.shiftType === 1 ? '上午' : '下午' }}</div>
+                            <div class="tl-doctor">{{ item.doctorName || `医生${item.doctorId}` }}</div>
+                            <div class="tl-meta">
+                                <span class="tl-tag" :class="statusTagClass(item.status)">{{ statusText(item.status) }}</span>
+                                <span class="tl-dept">{{ item.deptName }}</span>
+                            </div>
+                            <el-button v-if="item.status === 0" size="small" round plain type="danger" @click="handleCancel(item)">取消</el-button>
+                        </div>
+                    </div>
+                    <el-empty v-if="!loading && recentAppointments.length === 0" description="暂无挂号记录" :image-size="80" />
+                </div>
+                <el-button link type="primary" size="small" @click="$router.push('/user/appointments')" style="margin-top:12px">
+                    查看全部挂号 <el-icon><ArrowRight /></el-icon>
+                </el-button>
+            </div>
+        </div>
+
+        <!-- 编辑资料弹窗 -->
         <el-dialog v-model="editDialogVisible" title="编辑个人资料" width="500px" destroy-on-close align-center>
-            <el-form ref="editFormRef" :model="editForm" :rules="editRules" label-width="80px" class="custom-form">
+            <el-form ref="editFormRef" :model="editForm" :rules="editRules" label-width="80px">
                 <el-form-item label="姓名" prop="name"><el-input v-model="editForm.name" placeholder="请输入真实姓名" /></el-form-item>
                 <el-form-item label="手机号" prop="phone"><el-input v-model="editForm.phone" placeholder="请输入手机号" maxlength="11" /></el-form-item>
                 <el-form-item label="性别" prop="gender">
@@ -181,7 +112,7 @@
                         <el-radio :value="2">女</el-radio>
                     </el-radio-group>
                 </el-form-item>
-                <el-form-item label="年龄" prop="age"><el-input-number v-model="editForm.age" :min="1" :max="150" controls-position="right" style="width: 100%" /></el-form-item>
+                <el-form-item label="年龄" prop="age"><el-input-number v-model="editForm.age" :min="1" :max="150" controls-position="right" style="width:100%" /></el-form-item>
                 <el-form-item label="身份证" prop="idCard"><el-input v-model="editForm.idCard" placeholder="请输入身份证号" maxlength="18" /></el-form-item>
             </el-form>
             <template #footer>
@@ -191,7 +122,7 @@
         </el-dialog>
 
         <ChangePassword v-model="showPasswordDialog" :on-submit="handleChangePassword" />
-    </div>
+    </PatientLayout>
 </template>
 
 <script setup lang="ts">
@@ -203,11 +134,11 @@ import { appointmentApi } from '@/api/appointment';
 import { patientAuthApi } from '@/api/patientAuth';
 import type { AppointmentVO } from '@/types/appointment';
 import type { PatientUpdateDTO } from '@/types/patient';
+import PatientLayout from '@/components/PatientLayout.vue';
 import ChangePassword from '@/components/ChangePassword.vue';
 import {
-    UserFilled, Edit, Iphone, Male, Postcard,
-    HomeFilled, FirstAidKit, Timer, CircleCheckFilled, CircleCloseFilled,
-    Calendar, Right, Tickets, Clock, ArrowRight
+    Calendar, Tickets, Edit, Lock, UserFilled, Iphone, Male,
+    Postcard, ArrowRight
 } from '@element-plus/icons-vue';
 
 const patientStore = usePatientStore();
@@ -237,20 +168,28 @@ const editRules: FormRules = {
     age: [{ required: true, message: '请输入年龄', trigger: 'blur' }]
 };
 
+const timePeriod = computed(() => {
+    const h = new Date().getHours();
+    if (h < 12) return '早上';
+    if (h < 14) return '中午';
+    if (h < 18) return '下午';
+    return '晚上';
+});
+
 const isProfileComplete = computed(() => patientStore.isProfileComplete());
 
-const stats = ref({
-    pending: 0,
-    completed: 0,
-    cancelled: 0
-});
+const stats = ref({ pending: 0, completed: 0, cancelled: 0 });
 
 const genderText = computed(() => {
-    const gender = patientStore.patientInfo?.gender;
-    if (gender === 1) return '男';
-    if (gender === 2) return '女';
+    const g = patientStore.patientInfo?.gender;
+    if (g === 1) return '男';
+    if (g === 2) return '女';
     return '未设置';
 });
+
+const statusClass = (s: number) => s === 1 ? 'tl-done' : s === 2 ? 'tl-cancel' : '';
+const statusText = (s: number) => ['待就诊', '已完成', '已取消'][s] || '未知';
+const statusTagClass = (s: number) => ['tag-pending', 'tag-done', 'tag-cancel'][s] || '';
 
 const openEditDialog = () => {
     if (patientStore.patientInfo) {
@@ -265,10 +204,8 @@ const openEditDialog = () => {
 
 const handleSaveProfile = async () => {
     if (!editFormRef.value) return;
-
     await editFormRef.value.validate(async (valid) => {
         if (!valid) return;
-
         saving.value = true;
         try {
             await patientStore.updateProfile(editForm);
@@ -287,24 +224,6 @@ const handleChangePassword = async (data: { oldPassword: string; newPassword: st
     patientStore.logout();
 };
 
-const getStatusType = (status: number) => {
-    switch (status) {
-        case 0: return 'primary';
-        case 1: return 'success';
-        case 2: return 'info';
-        default: return 'info';
-    }
-};
-
-const getStatusText = (status: number) => {
-    switch (status) {
-        case 0: return '待就诊';
-        case 1: return '已完成';
-        case 2: return '已取消';
-        default: return '未知';
-    }
-};
-
 const fetchAppointments = async () => {
     if (!patientStore.patientInfo?.id) return;
     loading.value = true;
@@ -312,7 +231,6 @@ const fetchAppointments = async () => {
         const res = await appointmentApi.getPatientAppointments(patientStore.patientInfo.id, 1, 5);
         if (res.code === 200) {
             recentAppointments.value = res.data.records;
-
             const allRes = await appointmentApi.getPatientAppointments(patientStore.patientInfo.id, 1, 1000);
             if (allRes.code === 200) {
                 const all = allRes.data.records;
@@ -356,371 +274,305 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-:deep(:root) {
-    --el-color-primary: #3b82f6;
-}
-
-.user-home-container {
-    min-height: 100vh;
-    background:
-        radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 26%),
-        #f8fafc;
-    font-family: 'Inter', sans-serif;
-}
-
-.user-header {
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    height: auto;
-    padding: 0;
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(14px);
-    border-bottom: 1px solid #e2e8f0;
-
-    .header-inner {
-        max-width: 1200px;
-        margin: 0 auto;
-        min-height: 70px;
-        padding: 0 24px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-    }
-
-    .brand {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-
-        .brand-icon {
-            color: #3b82f6;
-            background: #eff6ff;
-            padding: 6px;
-            border-radius: 8px;
-            box-sizing: content-box;
-        }
-
-        h1 {
-            margin: 0;
-            font-size: 18px;
-            color: #0f172a;
-        }
-
-        p {
-            margin: 2px 0 0;
-            color: #94a3b8;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-        }
-    }
-}
-
-.main-content {
-    max-width: 1200px;
-    margin: 24px auto 0;
-    padding: 0 20px 56px;
-}
-
-.section-title {
-    font-size: 18px;
-    font-weight: 600;
-    color: #0f172a;
-    margin: 4px 0 14px;
-}
-
-.mb-4 {
-    margin-bottom: 16px;
-}
-
-.mr-2 {
-    margin-right: 8px;
-}
-
-.profile-card {
-    border-radius: 24px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.04);
-    overflow: hidden;
-
-    .profile-header-bg {
-        height: 92px;
-        background: linear-gradient(135deg, #eff6ff, #dbeafe);
-    }
-
-    .profile-content {
-        padding: 0 22px 22px;
-        text-align: center;
-
-        .avatar-wrapper {
-            position: relative;
-            display: inline-block;
-            margin-top: -42px;
-            margin-bottom: 12px;
-
-            .user-avatar {
-                border: 4px solid #fff;
-                background: #fff;
-                color: #cbd5e1;
-            }
-
-            .edit-badge {
-                position: absolute;
-                bottom: 0;
-                right: 0;
-                background: #3b82f6;
-                color: white;
-                width: 28px;
-                height: 28px;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border: 2px solid white;
-                cursor: pointer;
-                transition: transform 0.2s;
-
-                &:hover {
-                    transform: scale(1.1);
-                    background: #2563eb;
-                }
-            }
-        }
-
-        .user-name {
-            margin: 0 0 4px;
-            font-size: 20px;
-            color: #0f172a;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .user-username {
-            margin: 0 0 16px;
-            color: #94a3b8;
-            font-size: 14px;
-        }
-
-        .profile-alert {
-            margin-bottom: 16px;
-            background-color: #fff7ed;
-        }
-
-        .info-list {
-            margin-bottom: 20px;
-
-            .info-item {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 12px 0;
-                border-bottom: 1px solid #f1f5f9;
-                font-size: 14px;
-
-                &:last-child {
-                    border-bottom: none;
-                }
-
-                .label {
-                    color: #64748b;
-                    display: flex;
-                    align-items: center;
-                    gap: 6px;
-                }
-
-                .value {
-                    color: #334155;
-                    font-weight: 500;
-
-                    &.missing {
-                        color: #ef4444;
-                    }
-                }
-            }
-        }
-
-        .profile-actions {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-    }
-}
-
-.stat-card {
-    background: rgba(255, 255, 255, 0.96);
-    padding: 18px;
-    border-radius: 18px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.03);
-    border: 1px solid #e2e8f0;
-
-    .stat-icon {
-        width: 46px;
-        height: 46px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 24px;
-    }
-
-    .stat-info {
-        .stat-num {
-            font-size: 24px;
-            font-weight: 700;
-            color: #0f172a;
-            line-height: 1.2;
-        }
-
-        .stat-label {
-            font-size: 13px;
-            color: #64748b;
-        }
-    }
-
-    &.blue .stat-icon {
-        background: #eff6ff;
-        color: #3b82f6;
-    }
-
-    &.green .stat-icon {
-        background: #f0fdf4;
-        color: #22c55e;
-    }
-
-    &.gray .stat-icon {
-        background: #f1f5f9;
-        color: #64748b;
-    }
-}
-
-.quick-action-card {
-    background: rgba(255, 255, 255, 0.96);
-    padding: 22px;
+.welcome-card {
+    background: linear-gradient(135deg, #1a8a7a 0%, #2db8a0 100%);
     border-radius: 20px;
+    padding: 28px 32px;
+    color: white;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+
+    h1 {
+        margin: 0 0 6px;
+        font-size: 22px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+    }
+
+    p {
+        margin: 0;
+        font-size: 14px;
+        opacity: 0.85;
+        line-height: 1.6;
+    }
+}
+
+.welcome-stats {
+    display: flex;
+    gap: 24px;
+
+    div {
+        text-align: center;
+    }
+
+    .num {
+        display: block;
+        font-size: 26px;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+
+    .label {
+        font-size: 12px;
+        opacity: 0.75;
+    }
+}
+
+.quick-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 28px;
+}
+
+.quick-card {
+    background: white;
+    border-radius: 14px;
+    padding: 20px 16px;
+    text-align: center;
     cursor: pointer;
-    position: relative;
-    overflow: hidden;
-    border: 1px solid #e2e8f0;
-    transition: all 0.25s ease;
-
-    .content {
-        z-index: 2;
-
-        h3 {
-            margin: 0 0 6px;
-            font-size: 18px;
-            color: #0f172a;
-        }
-
-        p {
-            margin: 0;
-            font-size: 13px;
-            color: #64748b;
-        }
-    }
-
-    .action-btn {
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        background: #f8fafc;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #cbd5e1;
-        transition: all 0.25s;
-        z-index: 2;
-    }
-
-    .bg-icon {
-        position: absolute;
-        right: -10px;
-        bottom: -20px;
-        font-size: 96px;
-        opacity: 0.05;
-        transform: rotate(-15deg);
-        z-index: 1;
-    }
+    transition: all 0.25s;
+    box-shadow: 0 2px 10px rgba(26, 138, 122, 0.06);
 
     &:hover {
         transform: translateY(-2px);
-        box-shadow: 0 16px 28px rgba(15, 23, 42, 0.05);
-
-        .action-btn {
-            background: #3b82f6;
-            color: white;
-        }
+        box-shadow: 0 10px 24px rgba(26, 138, 122, 0.1);
     }
 
-    &.success:hover {
-        border-color: #bbf7d0;
+    .quick-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        margin: 0 auto 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 
-        .action-btn {
-            background: #22c55e;
+    h4 {
+        margin: 0 0 4px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #1a2a2a;
+    }
+
+    p {
+        margin: 0;
+        font-size: 12px;
+        color: #5a6a6a;
+    }
+}
+
+.profile-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.profile-card {
+    background: white;
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 2px 10px rgba(26, 138, 122, 0.06);
+}
+
+.card-label {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #9aabab;
+    margin: 0 0 18px;
+}
+
+.profile-avatar-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+
+    .profile-avatar {
+        background: #f0f2ef;
+        color: #bcc5c2;
+        border: 3px solid #f7f8f5;
+        box-shadow: 0 4px 12px rgba(26, 138, 122, 0.08);
+    }
+
+    .profile-name {
+        font-size: 17px;
+        font-weight: 600;
+        color: #1a2a2a;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 2px;
+    }
+
+    .profile-username {
+        font-size: 13px;
+        color: #9aabab;
+    }
+}
+
+.profile-alert {
+    margin-bottom: 16px;
+}
+
+.profile-info-list {
+    margin-bottom: 18px;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #eef0ec;
+    font-size: 14px;
+
+    &:last-child {
+        border-bottom: none;
+    }
+
+    .info-label {
+        color: #5a6a6a;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .info-value {
+        color: #1a2a2a;
+        font-weight: 500;
+
+        &.missing {
+            color: #e74c3c;
         }
     }
 }
 
-.recent-card {
-    border-radius: 24px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.04);
+.profile-actions {
+    display: flex;
+    gap: 10px;
+}
 
-    .card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+.tl-list {
+    min-height: 120px;
+}
 
-        .title-with-icon {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 600;
-            color: #0f172a;
-            font-size: 16px;
-        }
+.tl-item {
+    position: relative;
+    padding: 0 0 18px 28px;
+
+    &:last-child {
+        padding-bottom: 0;
     }
 
-    .doctor-cell {
-        display: flex;
-        align-items: center;
-
-        .doctor-name {
-            font-weight: 500;
-            color: #334155;
-        }
+    &::before {
+        content: '';
+        position: absolute;
+        left: 8px;
+        top: 18px;
+        bottom: 0;
+        width: 2px;
+        background: #dee5e2;
     }
 
-    .text-gray {
-        color: #cbd5e1;
+    &:last-child::before {
+        display: none;
     }
+}
+
+.tl-dot {
+    position: absolute;
+    left: 2px;
+    top: 4px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #1a8a7a;
+    border: 3px solid #e6f4f1;
+    z-index: 1;
+}
+
+.tl-done .tl-dot {
+    background: #9aabab;
+    border-color: #eef0ec;
+}
+
+.tl-cancel .tl-dot {
+    background: #e74c3c;
+    border-color: #fde8e8;
+}
+
+.tl-body {
+    padding-left: 8px;
+}
+
+.tl-date {
+    font-size: 12px;
+    color: #9aabab;
+    margin-bottom: 2px;
+}
+
+.tl-doctor {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a2a2a;
+    margin-bottom: 4px;
+}
+
+.tl-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.tl-tag {
+    display: inline-flex;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.tag-pending {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.tag-done {
+    background: #e6f4f1;
+    color: #1a8a7a;
+}
+
+.tag-cancel {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.tl-dept {
+    font-size: 12px;
+    color: #5a6a6a;
 }
 
 @media (max-width: 768px) {
-    .user-header .header-inner {
-        padding: 14px 16px;
-        flex-direction: column;
-        align-items: flex-start;
+    .quick-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
 
-    .main-content {
-        padding: 0 16px 40px;
+    .profile-grid {
+        grid-template-columns: 1fr;
     }
 
-    .profile-card {
-        margin-bottom: 16px;
+    .welcome-stats {
+        width: 100%;
+        justify-content: space-around;
     }
 }
 </style>

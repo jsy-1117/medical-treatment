@@ -1,15 +1,10 @@
 <template>
-    <div class="portal-container">
+    <div class="portal-root">
         <header class="portal-header">
-            <div class="header-content">
-                <div class="brand">
-                    <el-icon class="brand-icon" :size="28" color="var(--el-color-primary)">
-                        <FirstAidKit />
-                    </el-icon>
-                    <div class="brand-text">
-                        <h1>智慧医疗平台</h1>
-                        <p>Smart Medical Service</p>
-                    </div>
+            <div class="header-inner">
+                <div class="brand" @click="$router.push('/')" style="cursor:pointer">
+                    <div class="brand-mark">+</div>
+                    <span>智慧医疗平台</span>
                 </div>
 
                 <div class="nav-buttons">
@@ -38,117 +33,87 @@
         </header>
 
         <main class="portal-main">
+            <!-- Hero 欢迎区 -->
             <section class="hero-section">
-                <div class="hero-copy">
-                    <span class="eyebrow">Intelligent Medical Platform</span>
-                    <h2>智医云智慧医疗平台</h2>
-                    <p>
-                        点击下方按钮进行挂号
-                    </p>
-
-                    <div class="hero-actions">
-                        <el-button
-                            v-if="!isPatientLoggedIn"
-                            type="primary"
-                            size="large"
-                            round
-                            class="primary-action"
-                            @click="$router.push('/user/login')"
-                        >
-                            立即登录
-                            <el-icon class="el-icon--right"><Right /></el-icon>
-                        </el-button>
-                        <el-button
-                            v-else
-                            type="primary"
-                            size="large"
-                            round
-                            class="primary-action"
-                            @click="$router.push('/book')"
-                        >
-                            预约挂号
-                            <el-icon class="el-icon--right"><Right /></el-icon>
-                        </el-button>
-                        <el-button
-                            plain
-                            size="large"
-                            round
-                            class="secondary-action"
-                            @click="$router.push(isPatientLoggedIn ? '/user/home' : '/user/login')"
-                        >
-                            {{ isPatientLoggedIn ? '进入个人中心' : '查看健康档案' }}
-                        </el-button>
+                <div class="hero-card">
+                    <div class="hero-text">
+                        <span class="hero-eyebrow">智能医疗平台</span>
+                        <h1>智医云智慧医疗平台</h1>
+                        <p>连接优质医疗资源，守护您的健康生活。点击下方按钮，快速完成在线预约。</p>
+                        <div class="hero-actions">
+                            <el-button v-if="!isPatientLoggedIn" type="primary" size="large" round class="hero-btn"
+                                @click="$router.push('/user/login')">
+                                立即登录
+                                <el-icon class="el-icon--right"><Right /></el-icon>
+                            </el-button>
+                            <el-button v-else type="primary" size="large" round class="hero-btn"
+                                @click="$router.push('/book')">
+                                预约挂号
+                                <el-icon class="el-icon--right"><Right /></el-icon>
+                            </el-button>
+                            <el-button plain size="large" round class="hero-btn-secondary"
+                                @click="$router.push(isPatientLoggedIn ? '/user/home' : '/user/login')">
+                                {{ isPatientLoggedIn ? '进入个人中心' : '查看健康档案' }}
+                            </el-button>
+                        </div>
                     </div>
-                </div>
-
-                <div class="hero-panel">
-                    <div class="hero-metric">
-                        <div class="metric-value">{{ departmentList.length }}</div>
-                        <div class="metric-label">科室</div>
-                    </div>
-                    <div class="hero-metric highlight">
-                        <div class="metric-value">{{ doctorList.length }}</div>
-                        <div class="metric-label">专家</div>
-                    </div>
-                    <div class="hero-note">
-                        <el-icon><Calendar /></el-icon>
-                        <span>现有科室与相关专家数量</span>
+                    <div class="hero-stats">
+                        <div class="hero-stat">
+                            <span class="stat-num">{{ departmentList.length }}</span>
+                            <span class="stat-label">科室</span>
+                        </div>
+                        <div class="hero-stat">
+                            <span class="stat-num">{{ doctorList.length }}</span>
+                            <span class="stat-label">专家</span>
+                        </div>
+                        <div class="hero-note">
+                            <el-icon><Calendar /></el-icon>
+                            <span>现有科室与相关专家数量</span>
+                        </div>
                     </div>
                 </div>
             </section>
 
+            <!-- 重点科室 -->
             <section class="content-section">
                 <div class="section-header">
-                    <h2 class="title">重点科室 <span class="sub-title">Departments</span></h2>
-                    <el-button link type="primary">查看全部 <el-icon><ArrowRight /></el-icon></el-button>
+                    <h2>重点科室 <span class="sub">Departments</span></h2>
+                    <el-button link type="primary" @click="$router.push('/book')">查看全部 <el-icon><ArrowRight /></el-icon></el-button>
                 </div>
-
-                <el-row :gutter="20">
-                    <el-col :xs="12" :sm="12" :md="6" v-for="dept in departmentList" :key="dept.id" class="mb-4 dept-col">
-                        <div class="dept-card" @click="goToDeptDoctors(dept.id)">
-                            <div class="card-top">
-                                <div class="card-icon-wrapper">
-                                    <el-icon :size="26"><FirstAidKit /></el-icon>
-                                </div>
-                                <el-icon class="card-arrow"><Right /></el-icon>
-                            </div>
-                            <div class="card-info">
-                                <h3>{{ dept.deptName }}</h3>
-                                <p>{{ dept.deptDesc || '提供专业诊疗与健康咨询' }}</p>
-                            </div>
+                <div class="dept-grid">
+                    <div v-for="dept in departmentList" :key="dept.id" class="dept-card" @click="goToDeptDoctors(dept.id)">
+                        <div class="dept-icon"><FirstAidKit /></div>
+                        <div class="dept-info">
+                            <h3>{{ dept.deptName }}</h3>
+                            <p>{{ dept.deptDesc || '提供专业诊疗与健康咨询' }}</p>
                         </div>
-                    </el-col>
-                </el-row>
+                        <el-icon class="dept-arrow"><Right /></el-icon>
+                    </div>
+                </div>
             </section>
 
-            <section class="content-section doctor-section-bg" id="doctor-section">
+            <!-- 专家团队 -->
+            <section class="content-section doctor-section" id="doctor-section">
                 <div class="section-header">
-                    <h2 class="title">专家团队 <span class="sub-title">Specialists</span></h2>
+                    <h2>专家团队 <span class="sub">Specialists</span></h2>
                 </div>
-                <el-row :gutter="20">
-                    <el-col :xs="24" :sm="12" :md="6" v-for="doctor in doctorList" :key="doctor.id" class="mb-4">
-                        <el-card :body-style="{ padding: '0px' }" shadow="never" class="doctor-card">
-                            <div class="doctor-body">
-                                <el-avatar
-                                    :size="56"
-                                    class="doctor-avatar"
-                                    src="https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png"
-                                >
-                                    <el-icon><UserFilled /></el-icon>
-                                </el-avatar>
-                                <h3>{{ doctor.name }}</h3>
-                                <div class="tags">
-                                    <el-tag size="small" effect="plain" type="primary">{{ doctor.jobTitle }}</el-tag>
-                                    <el-tag size="small" effect="light" type="info">{{ doctor.deptName }}</el-tag>
-                                </div>
-                                <p class="intro">{{ doctor.introduction || '暂无详细简介，请点击预约了解更多。' }}</p>
-                                <el-button class="book-btn" type="primary" plain @click="goToBookDoctor(doctor.id)">
-                                    预约挂号
-                                </el-button>
+                <div class="doctor-grid">
+                    <div v-for="doctor in doctorList" :key="doctor.id" class="doctor-card">
+                        <div class="doctor-body">
+                            <el-avatar :size="56" class="doctor-avatar" icon="UserFilled"
+                                src="https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f6epng.png" />
+                            <h3>{{ doctor.name }}</h3>
+                            <div class="doctor-tags">
+                                <span class="tag tag-primary">{{ doctor.jobTitle }}</span>
+                                <span class="tag tag-info">{{ doctor.deptName }}</span>
                             </div>
-                        </el-card>
-                    </el-col>
-                </el-row>
+                            <p class="doctor-intro">{{ doctor.introduction || '暂无详细简介，请点击预约了解更多。' }}</p>
+                            <el-button class="doctor-book-btn" type="primary" plain @click="goToBookDoctor(doctor.id)">
+                                预约挂号
+                            </el-button>
+                        </div>
+                    </div>
+                </div>
             </section>
         </main>
 
@@ -247,77 +212,66 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-:deep(:root) {
-    --primary-color: #3b82f6;
-    --text-main: #0f172a;
-    --text-secondary: #64748b;
-    --surface: rgba(255, 255, 255, 0.9);
-}
-
-.portal-container {
+.portal-root {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    background:
-        radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 30%),
-        radial-gradient(circle at top right, rgba(16, 185, 129, 0.08), transparent 24%),
-        #f8fafc;
-    font-family: 'Inter', 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
+    background: #f7f8f5;
+    color: #1a2a2a;
+    font-family: 'DM Sans', 'Noto Sans SC', -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
 }
 
 .portal-header {
     position: sticky;
     top: 0;
     z-index: 100;
-    background: rgba(255, 255, 255, 0.88);
-    backdrop-filter: blur(14px);
-    border-bottom: 1px solid #e2e8f0;
+    background: rgba(247, 248, 245, 0.88);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid #eef0ec;
 
-    .header-content {
-        max-width: 1280px;
+    .header-inner {
+        max-width: 1060px;
         margin: 0 auto;
-        height: 72px;
-        padding: 0 24px;
+        height: 60px;
+        padding: 0 28px;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 24px;
+        gap: 16px;
     }
 
     .brand {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
 
-        .brand-icon {
-            background: #eff6ff;
-            border-radius: 14px;
-            padding: 8px;
-            box-sizing: content-box;
+        .brand-mark {
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #1a8a7a, #2db8a0);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 15px;
+            font-weight: 700;
         }
 
-        .brand-text {
-            h1 {
-                margin: 0;
-                font-size: 18px;
-                font-weight: 700;
-                color: #0f172a;
-            }
-
-            p {
-                margin: 2px 0 0;
-                color: #94a3b8;
-                font-size: 12px;
-                letter-spacing: 0.08em;
-                text-transform: uppercase;
-            }
+        span {
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            color: #1a2a2a;
         }
     }
 
     .nav-buttons {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 8px;
         flex-wrap: wrap;
     }
 }
@@ -325,107 +279,106 @@ onMounted(() => {
 .portal-main {
     flex: 1;
     width: 100%;
-    padding: 24px 0 56px;
+    padding: 0 0 56px;
 }
 
+/* ===== Hero ===== */
 .hero-section {
-    max-width: 1280px;
-    margin: 0 auto 40px;
-    padding: 0 24px;
-    display: grid;
-    grid-template-columns: 1.6fr 0.9fr;
-    gap: 20px;
+    max-width: 1060px;
+    margin: 28px auto 0;
+    padding: 0 28px;
 }
 
-.hero-copy,
-.hero-panel {
-    border: 1px solid #e2e8f0;
-    border-radius: 24px;
-    background: var(--surface);
-    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.04);
+.hero-card {
+    background: linear-gradient(135deg, #1a8a7a 0%, #2db8a0 100%);
+    border-radius: 20px;
+    padding: 40px 40px 36px;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    gap: 32px;
+    flex-wrap: wrap;
 }
 
-.hero-copy {
-    padding: 36px;
+.hero-text {
+    flex: 1;
+    min-width: 260px;
 
-    .eyebrow {
+    .hero-eyebrow {
         display: inline-flex;
-        align-items: center;
-        padding: 6px 12px;
-        border-radius: 999px;
-        background: #eff6ff;
-        color: #2563eb;
+        padding: 5px 12px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.18);
         font-size: 12px;
         font-weight: 600;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-        margin-bottom: 16px;
+        letter-spacing: 0.03em;
+        margin-bottom: 14px;
     }
 
-    h2 {
-        margin: 0 0 14px;
-        font-size: 40px;
-        line-height: 1.15;
-        color: #0f172a;
-        letter-spacing: -0.03em;
+    h1 {
+        margin: 0 0 10px;
+        font-size: 30px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        line-height: 1.2;
     }
 
     p {
-        margin: 0;
-        max-width: 680px;
-        color: #475569;
-        font-size: 16px;
-        line-height: 1.75;
+        margin: 0 0 22px;
+        font-size: 14px;
+        opacity: 0.85;
+        line-height: 1.6;
+        max-width: 420px;
     }
 }
 
 .hero-actions {
     display: flex;
-    gap: 12px;
+    gap: 10px;
     flex-wrap: wrap;
-    margin-top: 24px;
 }
 
-.primary-action,
-.secondary-action {
-    min-width: 156px;
+.hero-btn,
+.hero-btn-secondary {
+    min-width: 140px;
+    font-weight: 500;
 }
 
-.secondary-action {
-    border-color: #cbd5e1;
-    color: #334155;
-    background: rgba(255, 255, 255, 0.9);
-}
+.hero-btn-secondary {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: transparent;
+    color: #1a2a2a;
 
-.hero-panel {
-    padding: 24px;
-    display: grid;
-    gap: 14px;
-    align-content: center;
-}
-
-.hero-metric {
-    padding: 18px 20px;
-    border-radius: 18px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-
-    &.highlight {
-        background: linear-gradient(135deg, #eff6ff, #f0f9ff);
-        border-color: #bfdbfe;
+    &:hover {
+        background: white;
+        border-color: transparent;
     }
+}
 
-    .metric-value {
-        font-size: 32px;
+.hero-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 160px;
+}
+
+.hero-stat {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    padding: 14px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .stat-num {
+        font-size: 26px;
         font-weight: 700;
-        color: #0f172a;
         line-height: 1;
     }
 
-    .metric-label {
-        margin-top: 6px;
-        color: #64748b;
+    .stat-label {
         font-size: 13px;
+        opacity: 0.8;
     }
 }
 
@@ -433,108 +386,92 @@ onMounted(() => {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 16px 18px;
-    border-radius: 16px;
-    background: #0f172a;
-    color: #e2e8f0;
-    font-size: 14px;
+    padding: 12px 18px;
+    border-radius: 14px;
+    background: rgba(0, 0, 0, 0.15);
+    font-size: 13px;
     line-height: 1.5;
 }
 
+/* ===== Content sections ===== */
 .content-section {
-    max-width: 1280px;
-    margin: 0 auto 56px;
-    padding: 0 24px;
+    max-width: 1060px;
+    margin: 40px auto 0;
+    padding: 0 28px;
+}
 
-    .section-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-end;
-        margin-bottom: 20px;
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 18px;
 
-        .title {
-            margin: 0;
-            font-size: 24px;
-            color: #0f172a;
-            display: flex;
-            align-items: baseline;
-            gap: 10px;
+    h2 {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 650;
+        color: #1a2a2a;
 
-            .sub-title {
-                font-size: 14px;
-                color: #94a3b8;
-                font-weight: 500;
-            }
+        .sub {
+            font-size: 13px;
+            color: #9aabab;
+            font-weight: 500;
         }
     }
 }
 
-.mb-4 {
-    margin-bottom: 20px;
-}
-
-.dept-col {
+/* ===== Department card grid ===== */
+.dept-grid {
     display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
 }
 
 .dept-card {
-    flex: 1;
-    min-height: 160px;
-    border-radius: 20px;
-    background: rgba(255, 255, 255, 0.96);
-    border: 1px solid #e2e8f0;
-    padding: 20px;
+    flex: 1 1 calc(25% - 9px);
+    min-width: 180px;
+    background: white;
+    border-radius: 14px;
+    padding: 22px 20px;
     cursor: pointer;
-    transition: all 0.25s ease;
+    transition: all 0.25s;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    gap: 12px;
+    box-shadow: 0 2px 10px rgba(26, 138, 122, 0.06);
 
     &:hover {
-        transform: translateY(-3px);
-        border-color: #bfdbfe;
-        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+        transform: translateY(-2px);
+        box-shadow: 0 10px 28px rgba(26, 138, 122, 0.12);
     }
 
-    .card-top {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .card-icon-wrapper {
-        width: 48px;
-        height: 48px;
-        border-radius: 14px;
-        background: #eff6ff;
-        color: #2563eb;
+    .dept-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: #e6f4f1;
+        color: #1a8a7a;
         display: flex;
         align-items: center;
         justify-content: center;
+        font-size: 20px;
     }
 
-    .card-arrow {
-        color: #cbd5e1;
-        transition: all 0.25s ease;
-    }
+    .dept-info {
+        flex: 1;
 
-    &:hover .card-arrow {
-        color: #2563eb;
-        transform: translateX(2px);
-    }
-
-    .card-info {
         h3 {
-            margin: 20px 0 8px;
-            font-size: 17px;
-            color: #0f172a;
+            margin: 0 0 6px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a2a2a;
         }
 
         p {
             margin: 0;
-            color: #64748b;
-            font-size: 14px;
-            line-height: 1.6;
+            font-size: 13px;
+            color: #5a6a6a;
+            line-height: 1.5;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             line-clamp: 2;
@@ -542,81 +479,119 @@ onMounted(() => {
             overflow: hidden;
         }
     }
+
+    .dept-arrow {
+        align-self: flex-end;
+        color: #d0d8d5;
+        font-size: 14px;
+        transition: all 0.2s;
+    }
+
+    &:hover .dept-arrow {
+        color: #1a8a7a;
+        transform: translateX(2px);
+    }
 }
 
-.doctor-section-bg {
-    .doctor-card {
-        border-radius: 20px;
-        border: 1px solid #e2e8f0;
-        background: rgba(255, 255, 255, 0.96);
-        overflow: hidden;
-        transition: all 0.25s ease;
-        height: 100%;
+/* ===== Doctor card grid ===== */
+.doctor-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
 
-        &:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
-            border-color: #bfdbfe;
-        }
-    }
+.doctor-card {
+    flex: 1 1 calc(25% - 9px);
+    min-width: 200px;
+    background: white;
+    border-radius: 14px;
+    overflow: hidden;
+    transition: all 0.25s;
+    box-shadow: 0 2px 10px rgba(26, 138, 122, 0.06);
 
-    .doctor-body {
-        padding: 24px 18px 20px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 28px rgba(26, 138, 122, 0.12);
     }
+}
+
+.doctor-body {
+    padding: 24px 18px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
 
     .doctor-avatar {
-        background: #f8fafc;
-        color: #cbd5e1;
-        border: 4px solid #fff;
-        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+        background: #f0f2ef;
+        color: #bcc5c2;
+        border: 4px solid #f7f8f5;
+        box-shadow: 0 8px 20px rgba(26, 138, 122, 0.06);
         margin-bottom: 14px;
     }
 
     h3 {
         margin: 0 0 10px;
-        font-size: 17px;
-        color: #0f172a;
-    }
-
-    .tags {
-        display: flex;
-        justify-content: center;
-        gap: 8px;
-        flex-wrap: wrap;
-        margin-bottom: 14px;
-    }
-
-    .intro {
-        margin: 0 0 16px;
-        color: #64748b;
-        font-size: 13px;
-        line-height: 1.65;
-        min-height: 42px;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-    }
-
-    .book-btn {
-        border-radius: 10px;
-        font-weight: 500;
+        font-size: 16px;
+        font-weight: 600;
+        color: #1a2a2a;
     }
 }
 
+.doctor-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 12px;
+}
+
+.tag {
+    display: inline-flex;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.tag-primary {
+    background: #e6f4f1;
+    color: #1a8a7a;
+}
+
+.tag-info {
+    background: #eef0ec;
+    color: #5a6a6a;
+}
+
+.doctor-intro {
+    margin: 0 0 16px;
+    color: #5a6a6a;
+    font-size: 13px;
+    line-height: 1.6;
+    min-height: 42px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.doctor-book-btn {
+    border-radius: 10px;
+    font-weight: 500;
+    font-size: 13px;
+}
+
+/* ===== Footer ===== */
 .portal-footer {
     margin-top: auto;
-    padding: 36px 24px 24px;
-    background: #0f172a;
-    color: #94a3b8;
+    padding: 36px 28px 24px;
+    background: #1a2a2a;
+    color: #9aabab;
 
     .footer-content {
-        max-width: 1280px;
+        max-width: 1060px;
         margin: 0 auto 20px;
         display: flex;
         justify-content: space-between;
@@ -625,59 +600,39 @@ onMounted(() => {
 
         h4 {
             margin: 0 0 10px;
-            color: #fff;
+            color: white;
             font-size: 15px;
         }
 
         p {
             margin: 0 0 8px;
-            font-size: 14px;
+            font-size: 13px;
         }
     }
 
     .copyright {
-        max-width: 1280px;
+        max-width: 1060px;
         margin: 0 auto;
         padding-top: 16px;
-        border-top: 1px solid rgba(148, 163, 184, 0.2);
+        border-top: 1px solid rgba(154, 171, 171, 0.2);
         text-align: center;
         font-size: 13px;
     }
 }
 
-@media (max-width: 1024px) {
-    .hero-section {
-        grid-template-columns: 1fr;
-    }
-
-    .hero-copy h2 {
-        font-size: 32px;
-    }
+@media (max-width: 900px) {
+    .dept-card { flex: 1 1 calc(50% - 6px); }
+    .doctor-card { flex: 1 1 calc(50% - 6px); }
 }
 
-@media (max-width: 768px) {
-    .portal-header .header-content {
-        height: auto;
-        padding: 16px 20px;
-        align-items: flex-start;
-        flex-direction: column;
-    }
-
-    .hero-section,
-    .content-section {
-        padding: 0 16px;
-    }
-
-    .hero-copy {
-        padding: 24px;
-    }
-
-    .hero-copy h2 {
-        font-size: 28px;
-    }
-
-    .nav-buttons {
-        width: 100%;
-    }
+@media (max-width: 640px) {
+    .dept-card { flex: 1 1 100%; }
+    .doctor-card { flex: 1 1 100%; }
+    .hero-card { padding: 28px 24px; flex-direction: column; }
+    .hero-text h1 { font-size: 24px; }
+    .portal-header .header-inner { padding: 12px 16px; flex-direction: column; align-items: flex-start; }
+    .nav-buttons { width: 100%; }
+    .content-section { padding: 0 16px; }
+    .hero-section { padding: 0 16px; }
 }
 </style>
