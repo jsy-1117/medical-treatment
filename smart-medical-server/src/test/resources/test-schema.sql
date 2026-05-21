@@ -1,12 +1,7 @@
-CREATE TABLE IF NOT EXISTS doctor_schedule (
+CREATE TABLE IF NOT EXISTS department (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    doctor_id BIGINT NOT NULL,
-    dept_id BIGINT NOT NULL,
-    work_date DATE NOT NULL,
-    shift_type INT NOT NULL DEFAULT 1,
-    quota INT NOT NULL DEFAULT 20,
-    remaining_quota INT NOT NULL DEFAULT 20,
-    status INT NOT NULL DEFAULT 1,
+    dept_name VARCHAR(64),
+    dept_desc TEXT,
     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -22,9 +17,44 @@ CREATE TABLE IF NOT EXISTS doctor (
     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS department (
+CREATE TABLE IF NOT EXISTS doctor_schedule (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    dept_name VARCHAR(64),
-    dept_desc TEXT,
+    doctor_id BIGINT NOT NULL,
+    dept_id BIGINT NOT NULL,
+    work_date DATE NOT NULL,
+    shift_type INT NOT NULL DEFAULT 1,
+    quota INT NOT NULL DEFAULT 20,
+    remaining_quota INT NOT NULL DEFAULT 20,
+    status INT NOT NULL DEFAULT 1,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS patient (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(64) UNIQUE,
+    name VARCHAR(64),
+    phone VARCHAR(20),
+    password VARCHAR(128),
+    gender VARCHAR(8),
+    age INT,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS appointment (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    patient_id BIGINT NOT NULL,
+    doctor_id BIGINT NOT NULL,
+    dept_id BIGINT NOT NULL,
+    schedule_id BIGINT NOT NULL,
+    work_date DATE NOT NULL,
+    shift_type INT NOT NULL DEFAULT 1,
+    status INT NOT NULL DEFAULT 0,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS admin (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(64) UNIQUE,
+    password VARCHAR(128),
     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

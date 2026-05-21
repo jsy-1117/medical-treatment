@@ -1,122 +1,74 @@
 <template>
-    <div class="book-container">
-        <el-header class="book-header">
-            <div class="header-inner">
-                <div class="brand">
-                    <el-icon :size="24" class="brand-icon">
-                        <Calendar />
-                    </el-icon>
-                    <div>
-                        <h1>预约挂号</h1>
-                        <p>Appointment</p>
-                    </div>
+    <PatientLayout>
+        <div class="book-page">
+            <!-- 搜索筛选 -->
+            <div class="search-card">
+                <div>
+                    <span class="search-eyebrow">快速筛选</span>
+                    <h2>选择科室查看可预约排班</h2>
+                    <p>选择科室后即可查看对应的医生排班与号源情况</p>
                 </div>
-                <el-button type="primary" plain round icon="HomeFilled" @click="$router.push('/')">
-                    返回首页
-                </el-button>
+                <div class="search-row">
+                    <el-select v-model="queryForm.deptId" placeholder="全部科室" clearable size="large" style="width: 220px" @change="fetchSchedules">
+                        <template #prefix><el-icon><OfficeBuilding /></el-icon></template>
+                        <el-option v-for="dept in departmentList" :key="dept.id" :label="dept.deptName" :value="dept.id" />
+                    </el-select>
+                    <el-button type="primary" size="large" icon="Search" @click="fetchSchedules">刷新排班</el-button>
+                </div>
             </div>
-        </el-header>
 
-        <div class="main-content">
-            <section class="search-card">
-                <div class="search-copy">
-                    <span class="eyebrow">快速筛选</span>
-                    <h2>选择科室并查看可预约排班</h2>
-                    <p>点击右侧选择条件</p>
+            <!-- 排班列表 -->
+            <div class="schedule-section">
+                <div class="schedule-header">
+                    <div class="schedule-title">
+                        <el-icon><Clock /></el-icon>
+                        <span>可预约排班</span>
+                    </div>
+                    <span class="schedule-count">{{ scheduleList.length }} 条结果</span>
                 </div>
 
-                <el-form inline class="custom-form">
-                    <el-form-item label="选择科室">
-                        <el-select v-model="queryForm.deptId" placeholder="全部科室" clearable size="large" style="width: 240px" @change="fetchSchedules">
-                            <template #prefix><el-icon><OfficeBuilding /></el-icon></template>
-                            <el-option v-for="dept in departmentList" :key="dept.id" :label="dept.deptName" :value="dept.id" />
-                        </el-select>
-                    </el-form-item>
-                    <el-form-item>
-                        <el-button type="primary" size="large" icon="Search" @click="fetchSchedules">刷新排班</el-button>
-                    </el-form-item>
-                </el-form>
-            </section>
-
-            <el-card class="schedule-card" shadow="never">
-                <template #header>
-                    <div class="card-header">
-                        <span class="title-with-icon"><el-icon><Clock /></el-icon> 可预约排班</span>
-                        <span class="header-tip">{{ scheduleList.length }} 条结果</span>
-                    </div>
-                </template>
-
-                <el-table
-                    :data="scheduleList"
-                    v-loading="loading"
-                    :header-cell-style="{ background: '#f8fafc', color: '#64748b' }"
-                    style="width: 100%"
-                >
-                    <el-table-column label="专家信息" min-width="200">
-                        <template #default="{ row }">
-                            <div class="doctor-info-cell">
-                                <el-avatar :size="44" icon="UserFilled" class="doctor-avatar" />
-                                <div class="doctor-text">
-                                    <div class="name">{{ row.doctorName }}</div>
-                                    <div class="dept">
-                                        <el-tag size="small" effect="plain" type="primary" round>{{ row.doctorJobTitle }}</el-tag>
+                <div class="schedule-table">
+                    <div v-loading="loading" class="schedule-list">
+                        <div v-for="row in scheduleList" :key="row.id" class="schedule-row">
+                            <div class="s-cell doc-cell">
+                                <el-avatar :size="44" icon="UserFilled" class="s-avatar" />
+                                <div>
+                                    <div class="s-name">{{ row.doctorName }}</div>
+                                    <div class="s-meta">
+                                        <span class="s-tag tag-primary">{{ row.doctorJobTitle }}</span>
                                         <span>{{ row.deptName }}</span>
                                     </div>
                                 </div>
                             </div>
-                        </template>
-                    </el-table-column>
-
-                    <el-table-column label="就诊日期" width="160">
-                        <template #default="{ row }">
-                            <div class="date-cell">
-                                <el-icon><Calendar /></el-icon>
-                                <span>{{ row.workDate }}</span>
+                            <div class="s-cell">
+                                <div class="s-date"><el-icon><Calendar /></el-icon> {{ row.workDate }}</div>
+                                <span class="s-tag" :class="row.shiftType === 1 ? 'tag-am' : 'tag-pm'">
+                                    {{ row.shiftType === 1 ? '上午 08:00-12:00' : '下午 14:00-18:00' }}
+                                </span>
                             </div>
-                        </template>
-                    </el-table-column>
-
-                    <el-table-column label="时段" width="120">
-                        <template #default="{ row }">
-                            <el-tag :type="row.shiftType === 1 ? 'warning' : 'info'" effect="light" class="shift-tag">
-                                <el-icon class="mr-1"><component :is="row.shiftType === 1 ? 'Sunny' : 'Moon'" /></el-icon>
-                                {{ row.shiftType === 1 ? '上午' : '下午' }}
-                            </el-tag>
-                        </template>
-                    </el-table-column>
-
-                    <el-table-column label="号源状态" width="150">
-                        <template #default="{ row }">
-                            <div class="quota-cell">
-                                <span :class="getQuotaClass(row.remainingQuota)">{{ row.remainingQuota > 0 ? `剩余 ${row.remainingQuota}` : '已约满' }}</span>
-                                <el-progress
-                                    :percentage="getQuotaPercentage(row.remainingQuota)"
-                                    :status="getQuotaStatus(row.remainingQuota)"
-                                    :show-text="false"
-                                    :stroke-width="4"
-                                />
+                            <div class="s-cell s-quota">
+                                <div class="quota-bar">
+                                    <span :class="quotaTextClass(row.remainingQuota)">
+                                        {{ row.remainingQuota > 0 ? `剩余 ${row.remainingQuota} 号` : '已约满' }}
+                                    </span>
+                                    <div class="q-bar">
+                                        <div class="q-fill" :style="{ width: quotaPercent(row.remainingQuota), background: quotaColor(row.remainingQuota) }"></div>
+                                    </div>
+                                </div>
                             </div>
-                        </template>
-                    </el-table-column>
-
-                    <el-table-column label="操作" width="120" align="right">
-                        <template #default="{ row }">
-                            <el-button v-if="row.remainingQuota > 0" type="primary" size="default" round @click="handleBook(row)">
-                                立即挂号
-                            </el-button>
-                            <el-button v-else type="info" disabled plain round>
-                                已满额
-                            </el-button>
-                        </template>
-                    </el-table-column>
-
-                    <template #empty>
-                        <el-empty description="当前筛选条件下暂无排班" :image-size="100" />
-                    </template>
-                </el-table>
-            </el-card>
+                            <div class="s-cell s-action">
+                                <el-button v-if="row.remainingQuota > 0" type="primary" round @click="handleBook(row)">
+                                    立即挂号
+                                </el-button>
+                                <el-button v-else disabled plain round>已满额</el-button>
+                            </div>
+                        </div>
+                        <el-empty v-if="!loading && scheduleList.length === 0" description="当前筛选条件下暂无排班" :image-size="100" />
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
+    </PatientLayout>
 </template>
 
 <script setup lang="ts">
@@ -128,9 +80,10 @@ import { publicApi } from '@/api/public';
 import { appointmentApi } from '@/api/appointment';
 import type { DepartmentVO } from '@/types/department';
 import type { SchedulePublicVO } from '@/types/public';
+import PatientLayout from '@/components/PatientLayout.vue';
 import {
-    Calendar, HomeFilled, Search, OfficeBuilding,
-    UserFilled, Sunny, Moon, Clock
+    Calendar, Search, OfficeBuilding,
+    UserFilled, Clock
 } from '@element-plus/icons-vue';
 
 const route = useRoute();
@@ -176,21 +129,21 @@ const fetchSchedules = async () => {
     }
 };
 
-const getQuotaClass = (count: number) => {
-    if (count <= 0) return 'text-gray';
-    if (count < 5) return 'text-danger';
-    return 'text-success';
+const quotaTextClass = (count: number) => {
+    if (count <= 0) return 'q-empty';
+    if (count < 5) return 'q-low';
+    return 'q-ok';
 };
 
-const getQuotaPercentage = (count: number) => {
-    if (count <= 0) return 100;
-    return Math.min((count / 30) * 100, 100);
+const quotaPercent = (count: number) => {
+    if (count <= 0) return '100%';
+    return `${Math.min((count / 30) * 100, 100)}%`;
 };
 
-const getQuotaStatus = (count: number) => {
-    if (count <= 0) return 'exception';
-    if (count < 10) return 'warning';
-    return 'success';
+const quotaColor = (count: number) => {
+    if (count <= 0) return '#e74c3c';
+    if (count < 10) return '#f59e0b';
+    return '#1a8a7a';
 };
 
 const handleBook = (schedule: SchedulePublicVO) => {
@@ -241,235 +194,248 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-:deep(:root) {
-    --el-color-primary: #3b82f6;
-}
-
-.book-container {
-    min-height: 100vh;
-    background:
-        radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 26%),
-        #f8fafc;
-    font-family: 'Inter', sans-serif;
-}
-
-.book-header {
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    height: auto;
-    padding: 0;
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(14px);
-    border-bottom: 1px solid #e2e8f0;
-
-    .header-inner {
-        max-width: 1200px;
-        margin: 0 auto;
-        min-height: 70px;
-        padding: 0 24px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-    }
-
-    .brand {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-
-        .brand-icon {
-            color: #3b82f6;
-            background: #eff6ff;
-            padding: 6px;
-            border-radius: 8px;
-            box-sizing: content-box;
-        }
-
-        h1 {
-            margin: 0;
-            font-size: 18px;
-            color: #0f172a;
-        }
-
-        p {
-            margin: 2px 0 0;
-            color: #94a3b8;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-        }
-    }
-}
-
-.main-content {
-    max-width: 1200px;
-    margin: 24px auto 0;
-    padding: 0 20px 56px;
+.book-page {
+    animation: fadeUp 0.4s ease both;
 }
 
 .search-card {
-    background: rgba(255, 255, 255, 0.96);
-    border: 1px solid #e2e8f0;
-    border-radius: 24px;
-    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.04);
-    padding: 24px;
+    background: white;
+    border-radius: 16px;
+    padding: 24px 28px;
     margin-bottom: 20px;
     display: flex;
     justify-content: space-between;
-    gap: 24px;
     align-items: center;
+    gap: 24px;
     flex-wrap: wrap;
+    box-shadow: 0 2px 10px rgba(26, 138, 122, 0.06);
 
-    .search-copy {
-        max-width: 420px;
-
-        .eyebrow {
-            display: inline-flex;
-            padding: 6px 12px;
-            border-radius: 999px;
-            background: #eff6ff;
-            color: #2563eb;
-            font-size: 12px;
-            font-weight: 600;
-            letter-spacing: 0.04em;
-            text-transform: uppercase;
-            margin-bottom: 12px;
-        }
-
-        h2 {
-            margin: 0 0 8px;
-            font-size: 24px;
-            color: #0f172a;
-        }
-
-        p {
-            margin: 0;
-            color: #64748b;
-            line-height: 1.7;
-        }
+    .search-eyebrow {
+        display: inline-flex;
+        padding: 4px 10px;
+        border-radius: 12px;
+        background: #e6f4f1;
+        color: #1a8a7a;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+        margin-bottom: 10px;
     }
 
-    .custom-form {
-        margin-left: auto;
+    h2 {
+        margin: 0 0 6px;
+        font-size: 20px;
+        font-weight: 650;
+        color: #1a2a2a;
+    }
 
-        :deep(.el-form-item) {
-            margin-bottom: 0;
-            margin-right: 16px;
-        }
+    p {
+        margin: 0;
+        color: #5a6a6a;
+        font-size: 13px;
     }
 }
 
-.schedule-card {
-    border-radius: 24px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.04);
+.search-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.schedule-section {
+    background: white;
+    border-radius: 16px;
     overflow: hidden;
+    box-shadow: 0 2px 10px rgba(26, 138, 122, 0.06);
+}
 
-    .card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+.schedule-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 24px;
+    border-bottom: 1px solid #eef0ec;
+}
 
-        .title-with-icon {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 600;
-            color: #0f172a;
-        }
+.schedule-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: #1a2a2a;
+    font-size: 15px;
+}
 
-        .header-tip {
-            color: #94a3b8;
-            font-size: 13px;
-        }
+.schedule-count {
+    color: #9aabab;
+    font-size: 13px;
+}
+
+.schedule-list {
+    min-height: 100px;
+}
+
+.schedule-row {
+    display: flex;
+    align-items: center;
+    padding: 16px 24px;
+    border-bottom: 1px solid #f5f6f3;
+    transition: background 0.15s;
+    gap: 16px;
+
+    &:last-child {
+        border-bottom: none;
     }
 
-    :deep(.el-table__row) {
-        height: 76px;
+    &:hover {
+        background: #fafbf9;
     }
+}
 
-    .doctor-info-cell {
-        display: flex;
-        align-items: center;
-        gap: 12px;
+.s-cell {
+    flex: 1;
+    min-width: 0;
+}
 
-        .doctor-avatar {
-            background: #f8fafc;
-            color: #cbd5e1;
-            border: 2px solid #fff;
-            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
-        }
+.doc-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 2;
+}
 
-        .doctor-text {
-            .name {
-                font-weight: 600;
-                color: #0f172a;
-                font-size: 14px;
-                margin-bottom: 4px;
-            }
+.s-avatar {
+    background: #f0f2ef;
+    color: #bcc5c2;
+    border: 2px solid #f7f8f5;
+    box-shadow: 0 4px 12px rgba(26, 138, 122, 0.06);
+    flex-shrink: 0;
+}
 
-            .dept {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                color: #64748b;
-                font-size: 13px;
-            }
-        }
-    }
+.s-name {
+    font-weight: 600;
+    color: #1a2a2a;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
 
-    .date-cell {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        color: #334155;
+.s-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #5a6a6a;
+}
+
+.s-date {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #1a2a2a;
+    font-weight: 500;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.s-quota {
+    max-width: 160px;
+}
+
+.s-action {
+    text-align: right;
+    flex-shrink: 0;
+    min-width: 120px;
+}
+
+.s-tag {
+    display: inline-flex;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.tag-primary {
+    background: #e6f4f1;
+    color: #1a8a7a;
+}
+
+.tag-am {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.tag-pm {
+    background: #e0eefc;
+    color: #1d6fc7;
+}
+
+.quota-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    span {
+        font-size: 13px;
         font-weight: 500;
     }
 
-    .quota-cell {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-
-        span {
-            font-size: 13px;
-            font-weight: 600;
-        }
-
-        .text-success {
-            color: #10b981;
-        }
-
-        .text-danger {
-            color: #f59e0b;
-        }
-
-        .text-gray {
-            color: #94a3b8;
-        }
+    .q-empty {
+        color: #9aabab;
     }
 
-    .shift-tag {
-        display: inline-flex;
-        align-items: center;
+    .q-low {
+        color: #e74c3c;
     }
 
-    .mr-1 {
-        margin-right: 4px;
+    .q-ok {
+        color: #1a8a7a;
+    }
+}
+
+.q-bar {
+    height: 4px;
+    background: #eef0ec;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.q-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.4s;
+}
+
+@keyframes fadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
 @media (max-width: 768px) {
-    .book-header .header-inner {
-        padding: 14px 16px;
-        flex-direction: column;
-        align-items: flex-start;
+    .schedule-row {
+        flex-wrap: wrap;
+        padding: 16px;
     }
 
-    .main-content {
-        padding: 0 16px 40px;
+    .doc-cell {
+        flex: 1 1 100%;
+    }
+
+    .s-quota {
+        max-width: none;
+        flex: 1;
+    }
+
+    .s-action {
+        flex-shrink: 1;
+        min-width: auto;
     }
 
     .search-card {

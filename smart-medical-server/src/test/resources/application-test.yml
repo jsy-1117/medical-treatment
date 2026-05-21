@@ -1,0 +1,26 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  sql:
+    init:
+      schema-locations: classpath:test-schema.sql
+      mode: always
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: root
+  cache:
+    type: simple
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+jwt:
+  secret: test-secret-key-for-jwt-unit-testing-only-not-for-production
+  expiration: 86400000
