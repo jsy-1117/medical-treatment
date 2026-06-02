@@ -72,6 +72,21 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- 推荐科室导航 -->
+                    <div v-if="recommendedDept && recommendedDept.id" class="recommend-card">
+                        <div class="recommend-icon">
+                            <el-icon><FirstAidKit /></el-icon>
+                        </div>
+                        <div class="recommend-info">
+                            <div class="recommend-label">推荐您前往</div>
+                            <div class="recommend-dept">{{ recommendedDept.name }}</div>
+                        </div>
+                        <el-button type="primary" class="recommend-btn" @click="goToBook">
+                            去挂号
+                            <el-icon><ArrowRight /></el-icon>
+                        </el-button>
+                    </div>
                 </div>
 
                 <div class="chat-footer">
@@ -106,11 +121,12 @@
 
 <script setup lang="ts">
 import { ref, nextTick } from 'vue';
+import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 // 引入图标：增加 Service, FirstAidKit, Position 等
 import {
     ChatDotRound, Close, Cpu, UserFilled, Position,
-    Service, FirstAidKit
+    Service, FirstAidKit, ArrowRight
 } from '@element-plus/icons-vue';
 import { geminiApi } from '@/api/gemini';
 import type { ChatMessage } from '@/types/chat';
@@ -121,6 +137,10 @@ const messages = ref<ChatMessage[]>([]);
 const inputMessage = ref('');
 const loading = ref(false);
 const messageListRef = ref<HTMLElement>();
+const router = useRouter();
+
+// 最新推荐科室信息
+const recommendedDept = ref<{ name: string; id: number } | null>(null);
 
 // 快捷问题
 const quickQuestions = ref([
@@ -153,6 +173,7 @@ const sendMessage = async () => {
 
     messages.value.push(userMessage);
     inputMessage.value = '';
+    recommendedDept.value = null; // 清空上一条推荐
 
     loading.value = true;
     scrollToBottom();
@@ -171,6 +192,14 @@ const sendMessage = async () => {
 
         messages.value.push(assistantMessage);
 
+        // 存储推荐科室信息
+        if (response.data.recommendedDepartment && response.data.recommendedDeptId) {
+            recommendedDept.value = {
+                name: response.data.recommendedDepartment,
+                id: response.data.recommendedDeptId
+            };
+        }
+
         if (response.data.urgent) {
             ElMessage.warning('检测到紧急症状，建议尽快就医！');
         }
@@ -186,6 +215,12 @@ const sendMessage = async () => {
 const askQuestion = (question: string) => {
     inputMessage.value = question;
     sendMessage();
+};
+
+const goToBook = () => {
+    if (recommendedDept.value?.id) {
+        router.push(`/book?deptId=${recommendedDept.value.id}`);
+    }
 };
 
 const scrollToBottom = () => {
@@ -470,6 +505,55 @@ $text-secondary: #64748b;
                 &:nth-child(3) {
                     animation-delay: 0.4s;
                 }
+            }
+        }
+
+        /* 推荐科室卡片 */
+        .recommend-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+            border: 1px solid #bfdbfe;
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin: 0 0 16px;
+            animation: slideUp 0.3s ease;
+
+            .recommend-icon {
+                width: 40px;
+                height: 40px;
+                background: #3b82f6;
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-size: 20px;
+                flex-shrink: 0;
+            }
+
+            .recommend-info {
+                flex: 1;
+                min-width: 0;
+
+                .recommend-label {
+                    font-size: 12px;
+                    color: #64748b;
+                    margin-bottom: 2px;
+                }
+
+                .recommend-dept {
+                    font-size: 15px;
+                    font-weight: 600;
+                    color: #1e293b;
+                }
+            }
+
+            .recommend-btn {
+                flex-shrink: 0;
+                border-radius: 8px;
+                font-weight: 500;
             }
         }
     }

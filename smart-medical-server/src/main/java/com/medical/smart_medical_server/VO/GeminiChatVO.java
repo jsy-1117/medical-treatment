@@ -20,9 +20,14 @@ public class GeminiChatVO {
     private String reply;
 
     /**
-     * 推荐的科室（如果有）
+     * 推荐的科室名称
      */
     private String recommendedDepartment;
+
+    /**
+     * 推荐的科室ID（用于前端导航跳转）
+     */
+    private Long recommendedDeptId;
 
     /**
      * 是否需要紧急就医
