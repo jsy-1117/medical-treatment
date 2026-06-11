@@ -7,7 +7,9 @@ import com.medical.smart_medical_server.service.GeminiService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
  * 智能导诊控制器
@@ -32,6 +34,18 @@ public class GeminiController {
         log.info("收到智能导诊请求: {}", chatDTO.getMessage());
         GeminiChatVO response = geminiService.chat(chatDTO);
         return Result.success(response);
+    }
+
+    /**
+     * 流式智能对话接口
+     *
+     * @param chatDTO 聊天请求
+     * @return SseEmitter 流式推送 AI 回复
+     */
+    @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter chatStream(@Valid @RequestBody GeminiChatDTO chatDTO) {
+        log.info("收到流式智能导诊请求: {}", chatDTO.getMessage());
+        return geminiService.chatStream(chatDTO);
     }
 
     /**

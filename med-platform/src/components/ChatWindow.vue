@@ -60,7 +60,7 @@
                         </div>
                     </div>
 
-                    <div v-if="loading" class="message-row assistant">
+                    <div v-if="loading && !streamStarted" class="message-row assistant">
                         <div class="message-avatar">
                             <el-avatar :size="36" icon="Cpu" class="ai-avatar" />
                         </div>
@@ -120,7 +120,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick } from 'vue';
+import { ref, nextTick, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 // 引入图标：增加 Service, FirstAidKit, Position 等
@@ -129,7 +129,8 @@ import {
     Service, FirstAidKit, ArrowRight
 } from '@element-plus/icons-vue';
 import { geminiApi } from '@/api/gemini';
-import type { ChatMessage } from '@/types/chat';
+import type { StreamCallbacks } from '@/api/gemini';
+import type { ChatMessage, ChatRequest } from '@/types/chat';
 
 // 状态
 const isOpen = ref(false);
@@ -141,6 +142,10 @@ const router = useRouter();
 
 // 最新推荐科室信息
 const recommendedDept = ref<{ name: string; id: number } | null>(null);
+
+// 流式状态
+const streamingAbortController = ref<AbortController | null>(null);
+const streamStarted = ref(false);
 
 // 快捷问题
 const quickQuestions = ref([
@@ -165,6 +170,12 @@ const sendMessage = async () => {
     const text = inputMessage.value.trim();
     if (!text || loading.value) return;
 
+    // 取消正在进行的流
+    if (streamingAbortController.value) {
+        streamingAbortController.value.abort();
+        streamingAbortController.value = null;
+    }
+
     const userMessage: ChatMessage = {
         role: 'user',
         content: text,
@@ -173,41 +184,100 @@ const sendMessage = async () => {
 
     messages.value.push(userMessage);
     inputMessage.value = '';
-    recommendedDept.value = null; // 清空上一条推荐
-
+    recommendedDept.value = null;
+    streamStarted.value = false;
     loading.value = true;
     scrollToBottom();
 
+    const chatRequest: ChatRequest = {
+        message: text,
+        history: messages.value.slice(0, -1).map(m => ({
+            role: m.role,
+            content: m.content
+        }))
+    };
+
+    // 尝试流式，失败回退同步
     try {
-        const response = await geminiApi.chat({
-            message: text,
-            history: messages.value.slice(0, -1) // 排除刚发的消息
-        });
-
-        const assistantMessage: ChatMessage = {
-            role: 'assistant',
-            content: response.data.reply,
-            timestamp: response.data.timestamp
-        };
-
-        messages.value.push(assistantMessage);
-
-        // 存储推荐科室信息
-        if (response.data.recommendedDepartment && response.data.recommendedDeptId) {
-            recommendedDept.value = {
-                name: response.data.recommendedDepartment,
-                id: response.data.recommendedDeptId
+        await new Promise<void>((resolve, reject) => {
+            const callbacks: StreamCallbacks = {
+                onDelta: (content) => {
+                    if (!streamStarted.value) {
+                        streamStarted.value = true;
+                        // 第一条 delta：创建 assistant 消息
+                        const assistantMsg: ChatMessage = {
+                            role: 'assistant',
+                            content,
+                            timestamp: Date.now()
+                        };
+                        messages.value.push(assistantMsg);
+                    } else {
+                        // 后续 delta：追加文本
+                        const last = messages.value[messages.value.length - 1];
+                        if (last && last.role === 'assistant') {
+                            last.content += content;
+                            // 触发响应式更新
+                            messages.value = [...messages.value];
+                        }
+                    }
+                    scrollToBottom();
+                },
+                onDone: (metadata) => {
+                    if (metadata.recommendedDepartment && metadata.recommendedDeptId) {
+                        recommendedDept.value = {
+                            name: metadata.recommendedDepartment,
+                            id: metadata.recommendedDeptId
+                        };
+                    }
+                    if (metadata.urgent) {
+                        ElMessage.warning('检测到紧急症状，建议尽快就医！');
+                    }
+                    resolve();
+                },
+                onError: (error) => {
+                    reject(error);
+                },
+                onCancel: () => {
+                    resolve(); // 用户取消 → 干净退出
+                }
             };
+
+            streamingAbortController.value = geminiApi.chatStream(chatRequest, callbacks);
+        });
+    } catch (error) {
+        // 流式失败 — 移除半成品消息，回退同步
+        console.warn('流式对话失败，回退到同步模式:', error);
+        if (streamStarted.value) {
+            messages.value.pop();
         }
 
-        if (response.data.urgent) {
-            ElMessage.warning('检测到紧急症状，建议尽快就医！');
+        try {
+            const response = await geminiApi.chat(chatRequest);
+
+            const assistantMessage: ChatMessage = {
+                role: 'assistant',
+                content: response.data.reply,
+                timestamp: response.data.timestamp
+            };
+            messages.value.push(assistantMessage);
+
+            if (response.data.recommendedDepartment && response.data.recommendedDeptId) {
+                recommendedDept.value = {
+                    name: response.data.recommendedDepartment,
+                    id: response.data.recommendedDeptId
+                };
+            }
+            if (response.data.urgent) {
+                ElMessage.warning('检测到紧急症状，建议尽快就医！');
+            }
+        } catch (syncError) {
+            console.error('发送消息失败:', syncError);
+            ElMessage.error('服务繁忙，请稍后再试');
         }
-    } catch (error) {
-        console.error('发送消息失败:', error);
-        ElMessage.error('服务繁忙，请稍后再试');
     } finally {
         loading.value = false;
+        streamStarted.value = false;
+        streamingAbortController.value = null;
         scrollToBottom();
     }
 };
@@ -230,6 +300,13 @@ const scrollToBottom = () => {
         }
     });
 };
+
+// 组件卸载时取消流
+onBeforeUnmount(() => {
+    if (streamingAbortController.value) {
+        streamingAbortController.value.abort();
+    }
+});
 
 const formatTime = (timestamp?: number) => {
     if (!timestamp) return '';

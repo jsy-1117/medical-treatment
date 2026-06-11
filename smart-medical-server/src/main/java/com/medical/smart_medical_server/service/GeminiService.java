@@ -2,6 +2,7 @@ package com.medical.smart_medical_server.service;
 
 import com.medical.smart_medical_server.DTO.GeminiChatDTO;
 import com.medical.smart_medical_server.VO.GeminiChatVO;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
  * AI 导诊服务接口
@@ -31,4 +32,12 @@ public interface GeminiService {
      * @return 格式化的上下文字符串
      */
     String getDynamicContext();
+
+    /**
+     * 流式智能对话
+     *
+     * @param chatDTO 聊天请求
+     * @return SseEmitter，用于流式推送 AI 回复
+     */
+    SseEmitter chatStream(GeminiChatDTO chatDTO);
 }

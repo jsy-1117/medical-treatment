@@ -20,10 +20,12 @@ import okhttp3.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -51,6 +53,8 @@ public class GeminiServiceImpl implements GeminiService {
 
     @Value("${deepseek.system-prompt}")
     private String systemPrompt;
+
+    private static final int MAX_CONTEXT_CHARS = 2000;
 
     private final OkHttpClient httpClient;
     private final Gson gson;
@@ -107,6 +111,133 @@ public class GeminiServiceImpl implements GeminiService {
         return chat(chatDTO);
     }
 
+    @Override
+    public SseEmitter chatStream(GeminiChatDTO chatDTO) {
+        SseEmitter emitter = new SseEmitter(60_000L);
+
+        // 在 Tomcat 线程中构建请求（含 DB 查询），避免 ClassLoader 冲突
+        JsonObject requestBody = buildRequestBody(chatDTO);
+        requestBody.addProperty("stream", true);
+        String requestBodyJson = gson.toJson(requestBody);
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                log.info("开始流式对话: {}", chatDTO.getMessage());
+
+                // 构建 OkHttp 请求（使用预序列化的 JSON）
+                RequestBody body = RequestBody.create(
+                        requestBodyJson,
+                        MediaType.parse("application/json; charset=utf-8")
+                );
+                Request request = new Request.Builder()
+                        .url(apiUrl)
+                        .addHeader("Authorization", "Bearer " + apiKey)
+                        .addHeader("Content-Type", "application/json")
+                        .addHeader("Accept", "text/event-stream")
+                        .post(body)
+                        .build();
+
+                try (Response response = httpClient.newCall(request).execute()) {
+                    if (!response.isSuccessful() || response.body() == null) {
+                        log.error("AI 流式请求失败: {}", response.code());
+                        emitter.completeWithError(new RuntimeException("AI 服务暂时不可用"));
+                        return;
+                    }
+
+                    okio.BufferedSource source = response.body().source();
+                    StringBuilder fullContent = new StringBuilder();
+                    String line;
+                    boolean doneSent = false;
+
+                    while ((line = source.readUtf8Line()) != null) {
+                        if (!line.startsWith("data: ")) continue;
+
+                        String data = line.substring(6);
+                        if ("[DONE]".equals(data)) break;
+
+                        try {
+                            JsonObject json = gson.fromJson(data, JsonObject.class);
+                            if (json == null || !json.has("choices")) continue;
+
+                            JsonObject choice = json.getAsJsonArray("choices")
+                                    .get(0).getAsJsonObject();
+                            if (!choice.has("delta")) continue;
+
+                            JsonObject delta = choice.getAsJsonObject("delta");
+                            String content = delta.has("content") && !delta.get("content").isJsonNull()
+                                    ? delta.get("content").getAsString() : "";
+
+                            if (!content.isEmpty()) {
+                                fullContent.append(content);
+                                emitter.send(SseEmitter.event()
+                                        .name("delta").data(content));
+                            }
+
+                            if (choice.has("finish_reason")
+                                    && !choice.get("finish_reason").isJsonNull()
+                                    && "stop".equals(choice.get("finish_reason").getAsString())) {
+
+                                sendDoneEvent(emitter, fullContent.toString());
+                                doneSent = true;
+                                return;
+                            }
+                        } catch (Exception e) {
+                            log.warn("解析流式数据行失败: {}", line, e);
+                        }
+                    }
+
+                    // 流结束但未发送 done（如 max_tokens 截断），补发 done
+                    if (!doneSent && fullContent.length() > 0) {
+                        sendDoneEvent(emitter, fullContent.toString());
+                    }
+                    emitter.complete();
+
+                } catch (Exception e) {
+                    log.error("流式请求处理失败", e);
+                    emitter.completeWithError(e);
+                }
+            } catch (Exception e) {
+                log.error("流式请求初始化失败", e);
+                emitter.completeWithError(e);
+            }
+        });
+
+        emitter.onTimeout(() -> {
+            log.warn("流式对话超时");
+            emitter.completeWithError(new RuntimeException("流式对话超时"));
+        });
+
+        emitter.onCompletion(() -> log.debug("流式对话完成"));
+
+        return emitter;
+    }
+
+    /**
+     * 发送 done 事件（含科室推荐、紧急检测等元数据）
+     */
+    private void sendDoneEvent(SseEmitter emitter, String fullText) {
+        try {
+            String recommendedDepartment = extractDepartment(fullText);
+            Boolean urgent = checkUrgency(fullText);
+            Long recommendedDeptId = findDepartmentIdByName(recommendedDepartment);
+
+            JsonObject metadata = new JsonObject();
+            if (recommendedDepartment != null) {
+                metadata.addProperty("recommendedDepartment", recommendedDepartment);
+            }
+            if (recommendedDeptId != null) {
+                metadata.addProperty("recommendedDeptId", recommendedDeptId);
+            }
+            metadata.addProperty("urgent", urgent);
+            metadata.addProperty("timestamp", System.currentTimeMillis());
+
+            emitter.send(SseEmitter.event()
+                    .name("done").data(gson.toJson(metadata)));
+        } catch (Exception e) {
+            log.warn("发送 done 事件失败", e);
+        }
+    }
+
     /**
      * 获取动态上下文（不使用缓存注解，子方法分别缓存）
      */
@@ -118,6 +249,13 @@ public class GeminiServiceImpl implements GeminiService {
         context.append(buildDepartmentContext());
         context.append(buildDoctorContext());
         context.append(buildScheduleContext());
+
+        // 截断超出预算的上下文，防止 Prompt 超长
+        if (context.length() > MAX_CONTEXT_CHARS) {
+            context.setLength(MAX_CONTEXT_CHARS);
+            context.append("\n...\n[上下文已截断]");
+            log.debug("动态上下文已截断至 {} 字符", MAX_CONTEXT_CHARS);
+        }
 
         log.debug("动态上下文长度: {} 字符", context.length());
         return context.toString();
