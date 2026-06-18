@@ -24,3 +24,13 @@ server:
 jwt:
   secret: test-secret-key-for-jwt-unit-testing-only-not-for-production
   expiration: 86400000
+
+deepseek:
+  api-key: test-key
+  model: deepseek-chat
+  api-url: https://api.deepseek.com/v1/chat/completions
+  max-tokens: 2048
+  temperature: 0.7
+  doctor-temperature: 0.3
+  system-prompt: "test system prompt for unit testing"
+  doctor-system-prompt: "test doctor system prompt for unit testing"

@@ -192,6 +192,17 @@
                 <el-form-item label="主诉 / 症状" required>
                     <el-input v-model="diagnosisForm.symptom" type="textarea" :rows="3"
                         placeholder="描述患者主诉、现病史及体征..." />
+                    <el-button class="ai-suggest-btn" type="warning" plain :loading="aiLoading"
+                        :disabled="!diagnosisForm.symptom.trim()"
+                        @click="getAiSuggestion">
+                        <el-icon><MagicStick /></el-icon> AI 辅助诊断
+                    </el-button>
+                </el-form-item>
+
+                <el-form-item v-if="aiSuggestion" label="AI 诊断建议（仅供参考）">
+                    <div class="ai-result-card">
+                        <pre class="ai-result-text">{{ aiSuggestion }}</pre>
+                    </div>
                 </el-form-item>
 
                 <el-form-item label="初步诊断" required>
@@ -224,7 +235,7 @@ import dayjs from 'dayjs';
 // 引入图标
 import {
     FirstAidKit, Back, Timer, FolderChecked, Calendar, Refresh,
-    UserFilled, Phone, Male, Female, EditPen, Document, Search, View
+    UserFilled, Phone, Male, Female, EditPen, Document, Search, View, MagicStick
 } from '@element-plus/icons-vue';
 
 const router = useRouter();
@@ -247,6 +258,9 @@ const diagnosisForm = reactive<DiagnosisCreateDTO>({
     diagnosisResult: '',
     prescription: ''
 });
+
+const aiLoading = ref(false);
+const aiSuggestion = ref('');
 
 // 计算今日待诊数量
 const pendingCount = computed(() => {
@@ -289,7 +303,29 @@ const startDiagnosis = (patient: TodayPatient) => {
         diagnosisResult: '',
         prescription: ''
     });
+    aiSuggestion.value = '';
     diagnosisDialogVisible.value = true;
+};
+
+// AI 辅助诊断
+const getAiSuggestion = async () => {
+    if (!diagnosisForm.symptom.trim() || !currentPatient.value) return;
+    aiLoading.value = true;
+    aiSuggestion.value = '';
+    try {
+        const res = await doctorPortalApi.getDiagnosisSuggestion({
+            symptom: diagnosisForm.symptom,
+            patientId: currentPatient.value.patientId
+        });
+        if (res.code === 200) {
+            aiSuggestion.value = res.data || '';
+        }
+    } catch (error) {
+        console.error('AI诊断建议失败', error);
+        ElMessage.error('AI 诊断建议生成失败，请稍后重试');
+    } finally {
+        aiLoading.value = false;
+    }
 };
 
 const submitDiagnosis = async () => {
@@ -524,5 +560,25 @@ onMounted(() => {
     display: flex;
     justify-content: flex-end;
     margin-top: 20px;
+}
+
+.ai-suggest-btn {
+    margin-top: 8px;
+}
+
+.ai-result-card {
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-radius: 8px;
+    padding: 12px 16px;
+
+    .ai-result-text {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.7;
+        color: #92400e;
+        white-space: pre-wrap;
+        font-family: inherit;
+    }
 }
 </style>
