@@ -21,6 +21,7 @@ export interface ChatRequest {
 export interface ChatResponse {
     reply: string;
     recommendedDepartment?: string;
+    recommendedDeptId?: number;
     urgent?: boolean;
     timestamp: number;
 }

@@ -323,10 +323,12 @@ public class GeminiServiceImpl implements GeminiService {
 
         String recommendedDepartment = extractDepartment(reply);
         Boolean urgent = checkUrgency(reply);
+        Long recommendedDeptId = findDepartmentIdByName(recommendedDepartment);
 
         return GeminiChatVO.builder()
                 .reply(reply)
                 .recommendedDepartment(recommendedDepartment)
+                .recommendedDeptId(recommendedDeptId)
                 .urgent(urgent)
                 .timestamp(System.currentTimeMillis())
                 .build();
@@ -361,6 +363,26 @@ public class GeminiServiceImpl implements GeminiService {
             }
         }
         return false;
+    }
+
+    /**
+     * 根据科室名称查找科室ID
+     */
+    private Long findDepartmentIdByName(String deptName) {
+        if (deptName == null || deptName.isEmpty()) {
+            return null;
+        }
+        try {
+            List<DepartmentVO> departments = departmentService.getAllDepartments();
+            for (DepartmentVO dept : departments) {
+                if (deptName.equals(dept.getDeptName())) {
+                    return dept.getId();
+                }
+            }
+        } catch (Exception e) {
+            log.warn("查找科室ID失败: {}", deptName, e);
+        }
+        return null;
     }
 
     // ========== 工具方法 ==========
