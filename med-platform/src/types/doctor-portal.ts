@@ -74,3 +74,9 @@ export interface DiagnosisUpdateDTO {
     diagnosisResult?: string;
     prescription?: string;
 }
+
+// AI 诊断建议请求
+export interface DiagnosisSuggestionRequest {
+    symptom: string;
+    patientId: number;
+}

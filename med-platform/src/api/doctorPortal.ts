@@ -7,7 +7,8 @@ import type {
     TodayPatient,
     DiagnosisVO,
     DiagnosisCreateDTO,
-    DiagnosisUpdateDTO
+    DiagnosisUpdateDTO,
+    DiagnosisSuggestionRequest
 } from '@/types/doctor-portal';
 
 /**
@@ -95,5 +96,10 @@ export const doctorPortalApi = {
     // 修改密码
     updatePassword(data: { oldPassword: string; newPassword: string }): Promise<Result<void>> {
         return request.put('/api/doctor-auth/password', data);
+    },
+
+    // AI 诊断建议
+    getDiagnosisSuggestion(data: DiagnosisSuggestionRequest): Promise<Result<string>> {
+        return request.post('/api/doctor-portal/diagnosis/suggest', data);
     }
 };

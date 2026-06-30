@@ -40,4 +40,13 @@ public interface GeminiService {
      * @return SseEmitter，用于流式推送 AI 回复
      */
     SseEmitter chatStream(GeminiChatDTO chatDTO);
+
+    /**
+     * 诊断建议
+     *
+     * @param symptom    患者症状描述
+     * @param patientId  患者ID（用于获取历史诊断）
+     * @return AI 生成的诊断建议
+     */
+    String diagnosisSuggest(String symptom, Long patientId);
 }

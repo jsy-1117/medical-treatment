@@ -58,3 +58,14 @@ CREATE TABLE IF NOT EXISTS admin (
     password VARCHAR(128),
     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS diagnosis (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    appointment_id BIGINT,
+    patient_id BIGINT,
+    doctor_id BIGINT,
+    symptom VARCHAR(512),
+    diagnosis_result VARCHAR(512),
+    prescription VARCHAR(512),
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

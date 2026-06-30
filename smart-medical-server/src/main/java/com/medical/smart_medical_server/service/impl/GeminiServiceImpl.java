@@ -1,5 +1,6 @@
 package com.medical.smart_medical_server.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -10,7 +11,11 @@ import com.medical.smart_medical_server.VO.DepartmentVO;
 import com.medical.smart_medical_server.VO.DoctorVO;
 import com.medical.smart_medical_server.VO.GeminiChatVO;
 import com.medical.smart_medical_server.VO.ScheduleLLMVO;
+import com.medical.smart_medical_server.entity.Diagnosis;
+import com.medical.smart_medical_server.entity.Patient;
 import com.medical.smart_medical_server.exception.BusinessException;
+import com.medical.smart_medical_server.mapper.DiagnosisMapper;
+import com.medical.smart_medical_server.mapper.PatientMapper;
 import com.medical.smart_medical_server.service.DepartmentService;
 import com.medical.smart_medical_server.service.DoctorService;
 import com.medical.smart_medical_server.service.DoctorScheduleService;
@@ -54,6 +59,12 @@ public class GeminiServiceImpl implements GeminiService {
     @Value("${deepseek.system-prompt}")
     private String systemPrompt;
 
+    @Value("${deepseek.doctor-system-prompt}")
+    private String doctorSystemPrompt;
+
+    @Value("${deepseek.doctor-temperature:0.3}")
+    private Double doctorTemperature;
+
     private static final int MAX_CONTEXT_CHARS = 2000;
 
     private final OkHttpClient httpClient;
@@ -68,6 +79,12 @@ public class GeminiServiceImpl implements GeminiService {
 
     @Autowired
     private DoctorScheduleService scheduleService;
+
+    @Autowired
+    private PatientMapper patientMapper;
+
+    @Autowired
+    private DiagnosisMapper diagnosisMapper;
 
     public GeminiServiceImpl() {
         this.httpClient = new OkHttpClient.Builder()
@@ -109,6 +126,117 @@ public class GeminiServiceImpl implements GeminiService {
         chatDTO.setMessage(prompt);
 
         return chat(chatDTO);
+    }
+
+    @Override
+    public String diagnosisSuggest(String symptom, Long patientId) {
+        try {
+            log.info("收到诊断建议请求: patientId={}, symptom={}", patientId, symptom);
+
+            // 构建患者上下文
+            String patientContext = buildPatientContext(patientId);
+
+            // 构建请求体（使用医生专用 prompt）
+            JsonObject requestBody = new JsonObject();
+            requestBody.addProperty("model", model);
+            requestBody.addProperty("max_tokens", maxTokens);
+            requestBody.addProperty("temperature", doctorTemperature);
+
+            JsonArray messages = new JsonArray();
+
+            // 系统消息：医生专用 prompt
+            JsonObject systemMessage = new JsonObject();
+            systemMessage.addProperty("role", "system");
+            systemMessage.addProperty("content", doctorSystemPrompt);
+            messages.add(systemMessage);
+
+            // 用户消息：症状 + 患者信息
+            String userContent = String.format(
+                    "请根据以下信息生成诊断建议：\n\n患者信息：\n%s\n\n主诉症状：%s",
+                    patientContext, symptom
+            );
+            JsonObject userMessage = new JsonObject();
+            userMessage.addProperty("role", "user");
+            userMessage.addProperty("content", userContent);
+            messages.add(userMessage);
+
+            requestBody.add("messages", messages);
+
+            // 发送同步请求
+            String responseText = sendRequest(requestBody);
+            String reply = extractReply(responseText);
+
+            return reply;
+
+        } catch (Exception e) {
+            log.error("生成诊断建议失败", e);
+            throw new BusinessException("AI 诊断建议服务暂时不可用，请稍后重试");
+        }
+    }
+
+    /**
+     * 构建患者上下文（基本信息和历史诊断）
+     */
+    private String buildPatientContext(Long patientId) {
+        StringBuilder sb = new StringBuilder();
+        try {
+            Patient patient = patientMapper.selectById(patientId);
+            if (patient != null) {
+                sb.append(String.format("- 姓名：%s\n", safeString(patient.getName(), "未知")));
+                sb.append(String.format("- 性别：%s\n",
+                        patient.getGender() != null ? (patient.getGender() == 1 ? "男" : "女") : "未知"));
+                sb.append(String.format("- 年龄：%d岁\n", patient.getAge() != null ? patient.getAge() : 0));
+            }
+
+            // 获取历史诊断作为参考
+            List<Diagnosis> pastDiagnoses = getPastDiagnoses(patientId);
+            if (pastDiagnoses != null && !pastDiagnoses.isEmpty()) {
+                sb.append("\n既往诊疗记录（最近5条）：\n");
+                int count = 0;
+                for (Diagnosis d : pastDiagnoses) {
+                    if (count >= 5) break;
+                    sb.append(String.format("%d. %s | 诊断：%s | 处方：%s\n",
+                            count + 1,
+                            safeString(d.getSymptom(), "未知症状"),
+                            safeString(d.getDiagnosisResult(), "未记录"),
+                            safeString(d.getPrescription(), "无")));
+                    count++;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("构建患者上下文失败", e);
+        }
+        return sb.toString();
+    }
+
+    /**
+     * 获取患者历史诊断记录
+     */
+    private List<Diagnosis> getPastDiagnoses(Long patientId) {
+        try {
+            LambdaQueryWrapper<Diagnosis> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(Diagnosis::getPatientId, patientId);
+            wrapper.orderByDesc(Diagnosis::getCreateTime);
+            wrapper.last("LIMIT 5");
+            return diagnosisMapper.selectList(wrapper);
+        } catch (Exception e) {
+            log.warn("获取患者历史诊断失败", e);
+            return null;
+        }
+    }
+
+    /**
+     * 从响应中提取回复文本
+     */
+    private String extractReply(String responseText) {
+        JsonObject jsonResponse = gson.fromJson(responseText, JsonObject.class);
+        if (jsonResponse.has("choices") && jsonResponse.getAsJsonArray("choices").size() > 0) {
+            JsonObject choice = jsonResponse.getAsJsonArray("choices").get(0).getAsJsonObject();
+            if (choice.has("message")) {
+                return choice.getAsJsonObject("message").get("content").getAsString();
+            }
+        }
+        return "";
     }
 
     @Override

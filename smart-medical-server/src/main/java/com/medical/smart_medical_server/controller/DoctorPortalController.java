@@ -10,6 +10,7 @@ import com.medical.smart_medical_server.entity.*;
 import com.medical.smart_medical_server.exception.BusinessException;
 import com.medical.smart_medical_server.mapper.*;
 import com.medical.smart_medical_server.service.DiagnosisService;
+import com.medical.smart_medical_server.service.GeminiService;
 import com.medical.smart_medical_server.utils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -41,6 +42,9 @@ public class DoctorPortalController {
 
     @Autowired
     private DiagnosisService diagnosisService;
+
+    @Autowired
+    private GeminiService geminiService;
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -280,6 +284,29 @@ public class DoctorPortalController {
         Long doctorId = getDoctorIdFromToken(authHeader);
         Page<DiagnosisVO> page = diagnosisService.getDoctorDiagnosisList(doctorId, pageNum, pageSize);
         return Result.success(page);
+    }
+
+    /**
+     * AI 诊断建议
+     */
+    @PostMapping("/diagnosis/suggest")
+    public Result<String> suggestDiagnosis(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, Object> body) {
+
+        // 验证医生身份
+        getDoctorIdFromToken(authHeader);
+
+        String symptom = (String) body.get("symptom");
+        if (symptom == null || symptom.isBlank()) {
+            throw new BusinessException("请先输入患者症状");
+        }
+
+        Long patientId = body.get("patientId") != null
+                ? ((Number) body.get("patientId")).longValue() : null;
+
+        String suggestion = geminiService.diagnosisSuggest(symptom, patientId);
+        return Result.success(suggestion);
     }
 
     // ========== 工具方法 ==========
